@@ -1,0 +1,5 @@
+# Ignore environment files
+*.env
+# Ignore build files
+*.js
+*.js.map

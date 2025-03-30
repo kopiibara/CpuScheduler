@@ -1,0 +1,3 @@
+## How to run 
+run the following command:
+python -m uvicorn src.main:app --reload
