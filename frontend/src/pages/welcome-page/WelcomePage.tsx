@@ -1,57 +1,92 @@
-import { Stack, Box, LinearProgress } from "@mui/material";
+import { Stack, Box, LinearProgress, Typography } from "@mui/material";
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useSystemInfoFetch } from "../../hooks/useSystemInfoFetch";
 
 const WelcomePage = () => {
-  const navigate = useNavigate();
+  const { fetchProgress, fetchSystemInfo } = useSystemInfoFetch(3000); // 3 seconds minimum loading time
 
+  // Trigger the fetch on component mount
   useEffect(() => {
-    const timer = setTimeout(() => {
-      navigate("/pages/dashboard");
-    }, 3000);
-
-    // Cleanup function to clear timer if component unmounts
-    return () => clearTimeout(timer);
-  }, [navigate]);
+    fetchSystemInfo();
+  }, [fetchSystemInfo]);
 
   return (
-    <Stack
-      spacing={2}
-      alignItems="center"
-      justifyContent="center"
-      height="full"
-      width="100vw"
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "100vh",
+        width: "100vw",
+        background: "#f8f8f4",
+      }}
     >
-      <Box
-        display="flex"
+      <Stack
+        spacing={3}
         alignItems="center"
         justifyContent="center"
-        textAlign={"center"}
-        width="100%"
-        height="100%"
-        gap={2}
+        sx={{
+          width: "100%",
+          maxWidth: "500px",
+          padding: 3,
+        }}
       >
-        <img src="/cpuScheduler-icon.svg" alt="" className="w-12 h-auto" />
-        <p className="text-[#191C20] text-[3rem]">
-          cpu<strong>Scheduler</strong>
-        </p>
-      </Box>
-      <p className="text-[#191C20] text-[1rem]">Getting your system specs...</p>
-      <Box sx={{ width: "40%" }}>
-        <LinearProgress
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          textAlign="center"
+          gap={2}
+          sx={{ mb: 2 }}
+        >
+          <img
+            src="/cpuScheduler-icon.svg"
+            alt="CPU Scheduler"
+            style={{ width: "48px", height: "auto" }}
+          />
+          <Typography
+            variant="h2"
+            sx={{
+              color: "#191C20",
+              fontWeight: 400,
+              fontSize: { xs: "2rem", sm: "3rem" },
+            }}
+          >
+            cpu<strong>Scheduler</strong>
+          </Typography>
+        </Box>
+
+        <Typography
+          variant="body2"
           sx={{
-            height: 6,
-            borderRadius: 4,
-            backgroundColor: "rgba(25, 28, 32, 0.1)",
-            "& .MuiLinearProgress-bar": {
-              borderRadius: 4,
-              backgroundColor: "#191C20",
-            },
+            color: "#666",
+            textAlign: "center",
           }}
-        />
-      </Box>
-      <Box flex={1} />
-    </Stack>
+        >
+          {fetchProgress < 80
+            ? "Getting system information..."
+            : fetchProgress < 100
+            ? "Finalizing system configuration..."
+            : "Redirecting to dashboard..."}
+        </Typography>
+
+        <Box sx={{ width: "80%", mb: 2 }}>
+          <LinearProgress
+            variant="determinate"
+            value={fetchProgress}
+            sx={{
+              height: 8,
+              borderRadius: 4,
+              backgroundColor: "rgba(25, 28, 32, 0.1)",
+              "& .MuiLinearProgress-bar": {
+                borderRadius: 4,
+                backgroundColor: "#191C20",
+              },
+            }}
+          />
+        </Box>
+      </Stack>
+    </Box>
   );
 };
 
