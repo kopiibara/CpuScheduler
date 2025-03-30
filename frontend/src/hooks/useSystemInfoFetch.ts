@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSystemInfo } from "../context/SystemInfoContext";
 
@@ -11,9 +11,17 @@ export const useSystemInfoFetch = (minimumLoadingTime = 3000) => {
   const { setSystemInfo, setLoading, setError } = useSystemInfo();
   const [fetchProgress, setFetchProgress] = useState(0);
   const [dataFetched, setDataFetched] = useState(false);
-  const [fetchStartTime, setFetchStartTime] = useState(0);
+  const fetchStartTimeRef = useRef(0);
+  // Use ref to track if fetch has already been initiated
+  const fetchInitiatedRef = useRef(false);
 
   const fetchSystemInfo = useCallback(async () => {
+    // Prevent multiple fetch calls
+    if (fetchInitiatedRef.current) {
+      return;
+    }
+    fetchInitiatedRef.current = true;
+
     let progressInterval: string | number | NodeJS.Timeout | undefined;
     let errorInterval: string | number | NodeJS.Timeout | undefined;
 
@@ -21,7 +29,7 @@ export const useSystemInfoFetch = (minimumLoadingTime = 3000) => {
       setLoading(true);
       // Record when we start fetching
       const startTime = Date.now();
-      setFetchStartTime(startTime);
+      fetchStartTimeRef.current = startTime;
 
       const apiUrl = `${import.meta.env.VITE_BACKEND_URL}/system-info`;
       console.log("Fetching from:", apiUrl);
@@ -82,7 +90,7 @@ export const useSystemInfoFetch = (minimumLoadingTime = 3000) => {
       );
 
       // Calculate time elapsed since fetch started
-      const timeElapsed = Date.now() - fetchStartTime;
+      const timeElapsed = Date.now() - fetchStartTimeRef.current;
       const additionalWaitTime = Math.max(0, minimumLoadingTime - timeElapsed);
 
       // Handle error progress - slowly fill to 100% over the remaining minimum time
@@ -91,7 +99,7 @@ export const useSystemInfoFetch = (minimumLoadingTime = 3000) => {
       errorInterval = setInterval(() => {
         setFetchProgress((prev) => {
           const timeNow = Date.now();
-          const totalElapsed = timeNow - fetchStartTime;
+          const totalElapsed = timeNow - fetchStartTimeRef.current;
           if (totalElapsed >= minimumLoadingTime) {
             clearInterval(errorInterval);
             return 100;
@@ -116,9 +124,8 @@ export const useSystemInfoFetch = (minimumLoadingTime = 3000) => {
     setSystemInfo,
     setLoading,
     setError,
-    dataFetched,
     minimumLoadingTime,
-    fetchStartTime,
+    // Remove dataFetched from dependencies
   ]);
 
   // Return values and functions to be used in the component

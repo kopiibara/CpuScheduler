@@ -26,6 +26,8 @@ def get_system_info():
     cpu_freq = psutil.cpu_freq()
     frequency_mhz = cpu_freq.max if cpu_freq else 0
     frequency_ghz = round(frequency_mhz / 1000, 2) if frequency_mhz else "Unknown"
+
+    architecture = platform.architecture()[0]
     
     # Format threads with "Threads" suffix
     threads = psutil.cpu_count(logical=True)
@@ -37,10 +39,12 @@ def get_system_info():
     
     # Get CPU scheduling policy
     scheduling_policy = get_cpu_scheduling_policy()
+
     
     return {
         "manufacturer": processor,
         "cores": cores_formatted,
+        "architecture": architecture,
         "threads": threads_formatted,
         "frequency": f"{frequency_ghz} GHz" if isinstance(frequency_ghz, float) else frequency_ghz,
         "ram": f"{round(psutil.virtual_memory().total / (1024 ** 3), 1)} GB",  
