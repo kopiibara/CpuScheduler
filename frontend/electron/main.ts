@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, screen } from "electron";
+import { app, BrowserWindow, Menu, ipcMain } from "electron";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -28,19 +28,13 @@ let win: BrowserWindow | null;
 
 function createWindow() {
   // Get the screen dimensions
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const { width, height } = primaryDisplay.workAreaSize;
 
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, "cpuScheduler-icon.ico"),
-    width: Math.min(1280, width * 0.8), // 80% of screen width up to 1280px
-    height: Math.min(1000, height * 0.8), // 80% of screen height up to 900px
-    minWidth: 800, // Minimum width of the window
-    minHeight: 600, // Minimum height of the window
-    center: true, // Center window on screen
-    resizable: true, // Allow window resizing
-    frame: true, // Show window frame
-    titleBarStyle: "default", // Window title bar style
+    width: 1400, // Default width of the window
+    height: 800,
+    resizable: false, // Allow window resizing
+    frame: false, // Remove default window frame
     webPreferences: {
       preload: path.join(__dirname, "preload.mjs"),
     },
@@ -57,6 +51,17 @@ function createWindow() {
     win?.webContents.send("main-process-message", new Date().toLocaleString());
   });
 
+  // Add this after your BrowserWindow creation code
+
+  // Listen for window maximize/unmaximize events
+  win.on("maximize", () => {
+    win?.webContents.send("window-state-changed", { isMaximized: true });
+  });
+
+  win.on("unmaximize", () => {
+    win?.webContents.send("window-state-changed", { isMaximized: false });
+  });
+
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL);
   } else {
@@ -64,6 +69,30 @@ function createWindow() {
     win.loadFile(path.join(RENDERER_DIST, "index.html"));
   }
 }
+
+// Set up IPC handlers for window controls
+ipcMain.on("window-minimize", () => {
+  if (win) win.minimize();
+});
+
+ipcMain.on("window-maximize", () => {
+  if (win) {
+    if (win.isMaximized()) {
+      win.unmaximize();
+    } else {
+      win.maximize();
+    }
+  }
+});
+
+ipcMain.on("window-close", () => {
+  if (win) win.close();
+});
+
+ipcMain.handle("window-is-maximized", () => {
+  if (win) return win.isMaximized();
+  return false;
+});
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits

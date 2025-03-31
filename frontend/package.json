@@ -19,12 +19,14 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.4.1",
+    "react-transition-group": "^4.4.5",
     "styled-components": "^6.1.16"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.17",
     "@types/react": "^18.2.64",
     "@types/react-dom": "^18.2.21",
+    "@types/react-transition-group": "^4.4.12",
     "@typescript-eslint/eslint-plugin": "^7.1.1",
     "@typescript-eslint/parser": "^7.1.1",
     "@vitejs/plugin-react": "^4.2.1",
