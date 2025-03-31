@@ -1,4 +1,4 @@
-import { Stack, Box, LinearProgress, Typography } from "@mui/material";
+import { Stack, Box, LinearProgress } from "@mui/material";
 import { useEffect } from "react";
 import { useSystemInfoFetch } from "../../hooks/useSystemInfoFetch";
 
@@ -18,7 +18,6 @@ const WelcomePage = () => {
         justifyContent: "center",
         minHeight: "100vh",
         width: "100vw",
-        background: "#f8f8f4",
       }}
     >
       <Stack
@@ -44,31 +43,18 @@ const WelcomePage = () => {
             alt="CPU Scheduler"
             style={{ width: "48px", height: "auto" }}
           />
-          <Typography
-            variant="h2"
-            sx={{
-              color: "#191C20",
-              fontWeight: 400,
-              fontSize: { xs: "2rem", sm: "3rem" },
-            }}
-          >
-            cpu<strong>Scheduler</strong>
-          </Typography>
+          <p className="text-[#FBFCFA] text-5xl">
+            CPU<strong>SCHEDULER</strong>
+          </p>
         </Box>
 
-        <Typography
-          variant="body2"
-          sx={{
-            color: "#666",
-            textAlign: "center",
-          }}
-        >
+        <p className="text-[#5A6062] font-['Inter'] text-center">
           {fetchProgress < 80
             ? "Getting system information..."
             : fetchProgress < 100
             ? "Finalizing system configuration..."
             : "Redirecting to dashboard..."}
-        </Typography>
+        </p>
 
         <Box sx={{ width: "80%", mb: 2 }}>
           <LinearProgress
@@ -77,10 +63,10 @@ const WelcomePage = () => {
             sx={{
               height: 8,
               borderRadius: 4,
-              backgroundColor: "rgba(25, 28, 32, 0.1)",
+              backgroundColor: "#151B1E",
               "& .MuiLinearProgress-bar": {
                 borderRadius: 4,
-                backgroundColor: "#191C20",
+                backgroundColor: "#60E2AE",
               },
             }}
           />

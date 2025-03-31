@@ -1,192 +1,193 @@
+import { Stack, Tooltip } from "@mui/material";
 import { useState } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Button,
-  TextField,
-  Input,
-  Typography,
-} from "@mui/material";
-import { Process } from "../types/ProcessObject"; // Adjust the import path as necessary
+import AddRoundedIcon from "@mui/icons-material/AddRounded";
+
+import "../style/custom-scrollbar.css";
+
+// Use unique IDs that don't change when reindexing
+let nextId = 2; // Start with 2 since we already have process 1
 
 const ProcessInput = () => {
-  const [processes, setProcesses] = useState<Process[]>([]);
-  const [file, setFile] = useState<File | null>(null);
+  const [processes, setProcesses] = useState([
+    { id: 1, index: 1, arrival: "", burst: "", priority: "" },
+  ]);
 
-  // Add a new process row
   const addProcess = () => {
+    const newId = nextId++;
     setProcesses([
       ...processes,
-      { id: processes.length + 1, arrivalTime: 0, burstTime: 0, priority: 0 },
+      {
+        id: newId,
+        index: processes.length + 1,
+        arrival: "",
+        burst: "",
+        priority: "",
+      },
     ]);
   };
 
-  // Update process data
-  const updateProcess = (index: number, key: keyof Process, value: number) => {
-    const newProcesses = [...processes];
-    newProcesses[index][key] = value;
-    setProcesses(newProcesses);
+  const removeProcess = (id: number) => {
+    // Don't remove if it's the last process
+    if (processes.length <= 1) {
+      return;
+    }
+
+    // Remove the process with the specific ID
+    const filteredProcesses = processes.filter((process) => process.id !== id);
+
+    // Reindex remaining processes to ensure sequential indexes (not IDs)
+    const reindexedProcesses = filteredProcesses.map((process, idx) => ({
+      ...process,
+      index: idx + 1, // Update visual index
+    }));
+
+    setProcesses(reindexedProcesses);
   };
 
-  // Handle file selection
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      setFile(event.target.files[0]);
-    }
-  };
-
-  // Upload file to backend
-  const uploadFile = async () => {
-    if (!file) return;
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/upload_processes`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      const result = await response.json();
-      alert(result.message);
-    } catch (error) {
-      console.error("Error uploading file", error);
-    }
-  };
-
-  // Submit processes to backend
-  const submitProcesses = async () => {
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/submit_processes`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ processes }),
-        }
-      );
-
-      const result = await response.json();
-      alert(result.message);
-    } catch (error) {
-      console.error("Error submitting processes", error);
-    }
-  };
-
-  // Generate random processes from backend
-  const generateRandomProcesses = async () => {
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/generate_processes`
-      );
-      const data = await response.json();
-      setProcesses(data);
-    } catch (error) {
-      console.error("Error generating random processes", error);
-    }
+  const handleChange = (id: number, field: string, value: string) => {
+    setProcesses(
+      processes.map((process) =>
+        process.id === id ? { ...process, [field]: value } : process
+      )
+    );
   };
 
   return (
-    <div
-      style={{
-        padding: 2,
-        maxWidth: "800px",
-        margin: "auto",
-        overflowY: "auto",
-      }}
+    <Stack
+      spacing={4}
+      className="h-full flex flex-col overflow-hidden w-auto py-6 px-10 "
     >
-      <Typography
-        variant="h5"
-        sx={{ color: "#191C20", mb: 3, fontWeight: 600 }}
-      >
-        Process Input
-      </Typography>
-
-      <TableContainer
-        component={Paper}
-        sx={{ maxHeight: 600, overflowY: "auto" }}
-      >
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>ID</TableCell>
-              <TableCell>Arrival Time</TableCell>
-              <TableCell>Burst Time</TableCell>
-              <TableCell>Priority</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {processes.map((process, index) => (
-              <TableRow key={index}>
-                <TableCell>{process.id}</TableCell>
-                <TableCell>
-                  <TextField
-                    type="number"
-                    value={process.arrivalTime}
-                    onChange={(e) =>
-                      updateProcess(
-                        index,
-                        "arrivalTime",
-                        Number(e.target.value)
-                      )
-                    }
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  <TextField
-                    type="number"
-                    value={process.burstTime}
-                    onChange={(e) =>
-                      updateProcess(index, "burstTime", Number(e.target.value))
-                    }
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  <TextField
-                    type="number"
-                    value={process.priority || 0}
-                    onChange={(e) =>
-                      updateProcess(index, "priority", Number(e.target.value))
-                    }
-                    size="small"
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      <div style={{ marginTop: "20px", display: "flex", gap: "10px" }}>
-        <Button variant="contained" color="primary" onClick={addProcess}>
-          Add Process
-        </Button>
-        <Button
-          variant="contained"
-          color="secondary"
-          onClick={generateRandomProcesses}
+      {/* Header section */}
+      <header>
+        <Stack
+          spacing={1}
+          className="flex-shrink-0"
+          direction={"row"}
+          alignItems={"center"}
+          justifyContent={"space-between"}
         >
-          Generate Random
-        </Button>
-        <Input type="file" onChange={handleFileUpload} />
-        <Button variant="contained" color="warning" onClick={uploadFile}>
-          Upload File
-        </Button>
-        <Button variant="contained" color="success" onClick={submitProcesses}>
-          Submit
-        </Button>
-      </div>
-    </div>
+          <Stack spacing={1}>
+            <p className="text-[#FBFCFA] text-[22px] font-[600]">ADD PROCESS</p>
+            <p className="text-[#7F8588] text-[16px] font-['Inter']">
+              Input the following details to start simulation.
+            </p>
+          </Stack>
+          <Tooltip
+            title="Add"
+            arrow
+            placement="bottom"
+            componentsProps={{
+              tooltip: {
+                sx: {
+                  bgcolor: "#242A2D",
+                  color: "#FBFCFA",
+                  borderRadius: "8px",
+                  padding: "0.5rem 1rem",
+                  fontSize: "0.75rem",
+                  "& .MuiTooltip-arrow": {
+                    color: "#242A2D",
+                  },
+                },
+              },
+            }}
+          >
+            <button
+              onClick={addProcess}
+              className=" bg-white py-1 px-2 rounded-lg font-semibold hover:bg-[#60E2AE] transition"
+            >
+              <AddRoundedIcon fontSize="small" />
+            </button>
+          </Tooltip>
+        </Stack>
+      </header>
+
+      <body>
+        {/* Table header row */}
+        <div
+          className="grid w-full flex-shrink-0 pb-4"
+          style={{
+            gridTemplateColumns: "90px 0.45fr 0.45fr 0.45fr 45px",
+            gap: "10px",
+          }}
+        >
+          <div className="text-[#FBFCFA] text-[13px]">PROCESS ID</div>
+          <div className="text-[#FBFCFA] text-[13px]">ARRIVAL TIME</div>
+          <div className="text-[#FBFCFA] text-[13px]">BURST TIME</div>
+          <div className="text-[#FBFCFA] text-[13px]">PRIORITY</div>
+          <div className="text-[#FBFCFA] text-[13px]"></div>
+        </div>
+
+        {/* Scrollable process list - with max height to leave room for button */}
+        <div
+          className="overflow-y-auto custom-scrollbar overflow-x-hidden"
+          style={{ maxHeight: "calc(100% - 130px)" }}
+        >
+          {processes.map((process) => (
+            <div
+              className="grid items-center w-full mb-3"
+              style={{
+                gridTemplateColumns: "90px 0.45fr 0.45fr 0.45fr 45px",
+                gap: "10px",
+              }}
+            >
+              <span className="text-[#7F8588]">
+                # {String(process.index).padStart(2, "0")}
+              </span>
+              <input
+                type="number"
+                value={process.arrival}
+                onChange={(e) =>
+                  handleChange(process.id, "arrival", e.target.value)
+                }
+                className="bg-[#242A2D] text-white p-2 rounded-[8px] focus:ring focus:ring-blue-500 w-full"
+              />
+              <input
+                type="number"
+                value={process.burst}
+                onChange={(e) =>
+                  handleChange(process.id, "burst", e.target.value)
+                }
+                className="bg-[#242A2D] text-white p-2 rounded-[8px] focus:ring focus:ring-blue-500 w-full"
+              />
+              <input
+                type="number"
+                value={process.priority}
+                onChange={(e) =>
+                  handleChange(process.id, "priority", e.target.value)
+                }
+                className="bg-[#242A2D] text-white p-2 rounded-[8px] focus:ring focus:ring-blue-500 w-full"
+              />
+              {processes.length > 1 && (
+                <button
+                  onClick={() => removeProcess(process.id)}
+                  className="rounded-[8px] p-2 h-fit w-fit flex items-center justify-center hover:bg-[#1E1619] hover:scale-105 transition-all duration-200 ease-in"
+                >
+                  <img src="/trash.svg" alt="trash" className="w-5" />
+                </button>
+              )}
+              {processes.length <= 1 && <div className="w-[45px]"></div>}
+            </div>
+          ))}
+        </div>
+      </body>
+
+      <footer className="items-end text-">
+        s{/* Button to start simulation */}
+        <button className="absolute group  flex items-center gap-2 z-10 bottom-8 left-86 text-[#242A2D] text-[16px] hover:text-[#60E2AE] cursor-pointer">
+          Start Simulation{" "}
+          <img
+            src="/arrow-right.svg"
+            alt="arrow"
+            className="w-5 h-auto block group-hover:hidden transition-all duration-200"
+          />
+          <img
+            src="/arrow-right-light.svg"
+            alt="arrow"
+            className="w-5 h-auto hidden group-hover:block transition-all duration-200"
+          />
+        </button>
+      </footer>
+    </Stack>
   );
 };
 
