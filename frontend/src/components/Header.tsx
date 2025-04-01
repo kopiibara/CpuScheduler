@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Stack, Box, Divider } from "@mui/material";
+import InfoIcon from "@mui/icons-material/Info";
 
 // SVG Icons for window controls (more consistent across platforms)
 const MinimizeIcon = () => (
@@ -89,12 +90,13 @@ const Header = () => {
             alt="CPU Scheduler"
             className="w-[28px] h-auto mr-3"
           />
-          <p className="text-[16px] text-[#FBFCFA]">
+          <p className="text-[18px] text-[#FBFCFA]">
             CPU<strong>SCHEDULER</strong>
           </p>
         </Box>
-        <button className="text-[#242A2D] hover:text-[#60E2AE] px-1 cursor-pointer whitespace-nowrap text-[16px] ">
-          System Info
+        <button className="text-[#242A2D] hover:text-[#60E2AE] px-1 cursor-pointer whitespace-nowrap text-[16px] flex items-center">
+          <InfoIcon sx={{ mr: 1, fontSize: 20 }} />
+          SYSTEM INFO
         </button>
 
         <Divider

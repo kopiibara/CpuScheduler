@@ -55,7 +55,7 @@ const ProcessInput = () => {
   return (
     <Stack
       spacing={4}
-      className="h-full flex flex-col overflow-hidden w-auto py-6 px-10 "
+      className="h-full flex flex-col overflow-hidden w-auto py-6 px-10"
     >
       {/* Header section */}
       <header>
@@ -67,8 +67,8 @@ const ProcessInput = () => {
           justifyContent={"space-between"}
         >
           <Stack spacing={1}>
-            <p className="text-[#FBFCFA] text-[22px] font-[600]">ADD PROCESS</p>
-            <p className="text-[#7F8588] text-[16px] font-['Inter']">
+            <p className="text-[#FBFCFA] text-[16px] font-[600]">ADD PROCESS</p>
+            <p className="text-[#7F8588] text-[14px] font-['Inter']">
               Input the following details to start simulation.
             </p>
           </Stack>
@@ -93,7 +93,7 @@ const ProcessInput = () => {
           >
             <button
               onClick={addProcess}
-              className=" bg-white py-1 px-2 rounded-lg font-semibold hover:bg-[#60E2AE] transition"
+              className="bg-white w-8 h-8 rounded-lg font-semibold hover:bg-[#60E2AE] transition-all duration-200 flex items-center justify-center"
             >
               <AddRoundedIcon fontSize="small" />
             </button>
@@ -124,6 +124,7 @@ const ProcessInput = () => {
         >
           {processes.map((process) => (
             <div
+              key={process.id}
               className="grid items-center w-full mb-3"
               style={{
                 gridTemplateColumns: "90px 0.45fr 0.45fr 0.45fr 45px",
@@ -139,7 +140,8 @@ const ProcessInput = () => {
                 onChange={(e) =>
                   handleChange(process.id, "arrival", e.target.value)
                 }
-                className="bg-[#242A2D] text-white p-2 rounded-[8px] focus:ring focus:ring-blue-500 w-full"
+                className="bg-[#242A2D] text-white p-2 rounded-[8px] w-full outline-none border-2 border-transparent hover:border-[#60E2AE] focus:border-[#60E2AE] transition-colors duration-200"
+                placeholder="0"
               />
               <input
                 type="number"
@@ -147,7 +149,8 @@ const ProcessInput = () => {
                 onChange={(e) =>
                   handleChange(process.id, "burst", e.target.value)
                 }
-                className="bg-[#242A2D] text-white p-2 rounded-[8px] focus:ring focus:ring-blue-500 w-full"
+                className="bg-[#242A2D] text-white p-2 rounded-[8px] w-full outline-none border-2 border-transparent hover:border-[#60E2AE] focus:border-[#60E2AE] transition-colors duration-200"
+                placeholder="0"
               />
               <input
                 type="number"
@@ -155,7 +158,8 @@ const ProcessInput = () => {
                 onChange={(e) =>
                   handleChange(process.id, "priority", e.target.value)
                 }
-                className="bg-[#242A2D] text-white p-2 rounded-[8px] focus:ring focus:ring-blue-500 w-full"
+                className="bg-[#242A2D] text-white p-2 rounded-[8px] w-full outline-none border-2 border-transparent hover:border-[#60E2AE] focus:border-[#60E2AE] transition-colors duration-200"
+                placeholder="0"
               />
               {processes.length > 1 && (
                 <button
@@ -172,18 +176,18 @@ const ProcessInput = () => {
       </body>
 
       <footer className="items-end text-">
-        s{/* Button to start simulation */}
-        <button className="absolute group  flex items-center gap-2 z-10 bottom-8 left-86 text-[#242A2D] text-[16px] hover:text-[#60E2AE] cursor-pointer">
-          Start Simulation{" "}
+        {/* Button to start simulation */}
+        <button className="absolute group flex items-center gap-2 z-10 bottom-8 left-90 text-[#242A2D] text-[14px] hover:text-[#60E2AE] cursor-pointer">
+          START SIMULATION{" "}
           <img
             src="/arrow-right.svg"
             alt="arrow"
-            className="w-5 h-auto block group-hover:hidden transition-all duration-200"
+            className="w-4 h-auto block group-hover:hidden transition-all duration-200"
           />
           <img
             src="/arrow-right-light.svg"
             alt="arrow"
-            className="w-5 h-auto hidden group-hover:block transition-all duration-200"
+            className="w-4 h-auto hidden group-hover:block transition-all duration-200"
           />
         </button>
       </footer>

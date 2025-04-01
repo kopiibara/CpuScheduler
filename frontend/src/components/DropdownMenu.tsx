@@ -68,7 +68,7 @@ const DropDownMenu: React.FC<DropDownMenuProps> = ({
     <Box
       sx={{
         minWidth: 120,
-        maxWidth: "100%", // Changed from "full" to "100%"
+        maxWidth: "100%",
         position: "relative",
       }}
       ref={anchorRef}
@@ -92,8 +92,8 @@ const DropDownMenu: React.FC<DropDownMenuProps> = ({
           backgroundColor: "242A2D",
           color: "#7F8588",
           borderRadius: "0.8rem",
-          fontSize: "12px",
-          padding: "8px 14px",
+          fontSize: "13px",
+          padding: "6px 12px",
           fontFamily: "Inter",
           border: "2px solid #242A2D",
           display: "flex",
@@ -125,7 +125,8 @@ const DropDownMenu: React.FC<DropDownMenuProps> = ({
             sx={{
               transition: "transform 0.3s",
               transform: open ? "rotate(180deg)" : "rotate(0deg)",
-              flexShrink: 0, // Prevent icon from shrinking
+              flexShrink: 0,
+              fontSize: "20px", // Smaller arrow icon
             }}
           />
         </Box>
@@ -186,12 +187,25 @@ const DropDownMenu: React.FC<DropDownMenuProps> = ({
                   autoFocusItem={open}
                   sx={{
                     padding: "0.5rem 0",
-                    "& .MuiMenuItem-root:focus": {
-                      outline: "none", // Remove default focus outline
-                    },
-                    "& .MuiMenuItem-root.Mui-focusVisible": {
-                      outline: "none", // Also handle keyboard focus
-                      backgroundColor: "rgba(59, 53, 76, 0.3)", // Custom focus background
+                    "& .MuiMenuItem-root": {
+                      fontSize: "13px",
+                      padding: "6px 12px",
+                      color: "#7F8588",
+                      "&:hover": {
+                        backgroundColor: "rgba(59, 53, 76, 0.3)",
+                        color: "#FBFCFA",
+                      },
+                      "&.Mui-selected": {
+                        backgroundColor: "transparent",
+                        color: "#FBFCFA",
+                      },
+                      "&:focus": {
+                        outline: "none",
+                      },
+                      "&.Mui-focusVisible": {
+                        outline: "none",
+                        backgroundColor: "rgba(59, 53, 76, 0.3)",
+                      },
                     },
                   }}
                 >
@@ -201,23 +215,8 @@ const DropDownMenu: React.FC<DropDownMenuProps> = ({
                       selected={item.value === selectedValue}
                       onClick={() => handleChange(item.value)}
                       sx={{
-                        color: "#E2DDF3",
-                        padding: { xs: "0.4rem 0.7rem", sm: "0.6rem 1rem" },
-                        margin: { xs: "0.1rem 0.3rem", sm: "0.2rem 0.5rem" },
-                        fontSize: "14px",
+                        fontSize: "13px",
                         fontFamily: "Inter",
-                        transition: "all 0.3s ease-in-out",
-                        borderRadius: "0.5rem",
-                        "&:hover": {
-                          backgroundColor: "#242A2D",
-                        },
-                        "&.Mui-selected": {
-                          backgroundColor: "#242A2D",
-                          color: "#E2DDF3",
-                          "&:hover": {
-                            backgroundColor: "#242A2D",
-                          },
-                        },
                       }}
                     >
                       {item.label}
