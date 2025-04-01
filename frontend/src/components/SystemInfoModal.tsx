@@ -126,7 +126,7 @@ export default function SystemInfoModal({
                 <Box className=" border-b-2 border-[#242A2D]">
                   <InfoItem
                     label="Ram"
-                    value={`${systemInfo?.ram || "N/A"} (Available RAM)`}
+                    value={`${systemInfo?.ram || "N/A"} (Usable RAM)`}
                   />
                 </Box>
                 <Box className="border-r-2 border-[#242A2D]">
