@@ -28,8 +28,16 @@ async def upload_processes(file: UploadFile):
 def generate_processes():
     """Generates random process data for demonstration"""
     global process_store
+    # Generate between 1 and 8 random processes
+    num_processes = random.randint(5, 20)  
     process_store = [
-        {"id": i + 1, "arrivalTime": random.randint(0, 10), "burstTime": random.randint(1, 10), "priority": random.randint(1, 6)}
-        for i in range(6)
+        {
+            "id": i + 1, 
+            "index": i + 1,
+            "arrival": str(random.randint(0, 64)), 
+            "burst": str(random.randint(1, 64)), 
+            "priority": str(random.randint(1, 64))
+        }
+        for i in range(num_processes)
     ]
     return process_store

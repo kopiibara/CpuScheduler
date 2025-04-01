@@ -8,6 +8,9 @@ def get_system_info():
     """Fetches system specifications"""
     # Get processor information
     processor = platform.processor()
+
+    # Get cpu architecture
+    cpu_architecture = platform.architecture()[0]
     
     # Clean up processor name to be more user-friendly
     # On Windows, this might show something like "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD"
@@ -22,6 +25,8 @@ def get_system_info():
             if match:
                 processor = match.group(0)
     
+    
+
     # Convert frequency from MHz to GHz
     cpu_freq = psutil.cpu_freq()
     frequency_mhz = cpu_freq.max if cpu_freq else 0
@@ -43,6 +48,7 @@ def get_system_info():
     
     return {
         "manufacturer": processor,
+        "cpu_architecture": cpu_architecture,  
         "cores": cores_formatted,
         "architecture": architecture,
         "threads": threads_formatted,

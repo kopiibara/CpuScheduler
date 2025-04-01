@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Box, Button, Modal, Stack } from "@mui/material";
 import { useSystemInfo } from "../context/SystemInfoContext";
+import CloseIcon from "@mui/icons-material/CloseRounded";
 import InfoItem from "./InfoItem";
 
 const style = {
@@ -58,7 +59,7 @@ export default function SystemInfoModal({
       <Modal open={open} onClose={handleClose}>
         <Box sx={style}>
           <Stack>
-            <Box className=" border-b-2 border-[#242A2D] p-6 ">
+            <Box className=" border-b-2 border-[#242A2D] p-6 flex flex-row justify-center items-center">
               <Stack spacing={0.25}>
                 <p className="text-[#FBFCFA] text-[16px] font-[600]">
                   SYSTEM INFORMATION
@@ -67,6 +68,15 @@ export default function SystemInfoModal({
                   List of system information and configuration details.
                 </p>
               </Stack>
+              <Box sx={{ flexGrow: 1 }} />
+
+              {/* Close button */}
+              <button
+                onClick={handleClose}
+                className="text-[#242A2D] border-0 items-center rounded-[8px] hover:text-[#60E2AE] cursor-pointer whitespace-nowrap text-[16px] transition-all duration-100 ease-in"
+              >
+                <CloseIcon />
+              </button>
             </Box>
 
             {error ? (
@@ -114,7 +124,10 @@ export default function SystemInfoModal({
                   />
                 </Box>
                 <Box className=" border-b-2 border-[#242A2D]">
-                  <InfoItem label="Ram" value={systemInfo?.ram || "N/A"} />
+                  <InfoItem
+                    label="Ram"
+                    value={`${systemInfo?.ram || "N/A"} (Available RAM)`}
+                  />
                 </Box>
                 <Box className="border-r-2 border-[#242A2D]">
                   <InfoItem

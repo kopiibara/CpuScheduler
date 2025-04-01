@@ -3,12 +3,17 @@ import { Stack, Box, Divider } from "@mui/material";
 import InfoIcon from "@mui/icons-material/Info";
 import WindowButtons from "./WindowButtons";
 import SystemInfoModal from "./SystemInfoModal";
+import { useSystemInfoFetch } from "../hooks/useSystemInfoFetch";
 
 const Header = () => {
   const [modalOpen, setModalOpen] = useState(false);
-
-  const handleOpenModal = () => setModalOpen(true);
+  const { fetchSystemInfo } = useSystemInfoFetch();
+  const handleOpenModal = () => {
+    fetchSystemInfo(); // Fetch system info when button is clicked
+    setModalOpen(true);
+  };
   const handleCloseModal = () => setModalOpen(false);
+
   return (
     <>
       <header className="flex justify-baseline w-screen items-center border-b-2 border-[#242A2D]">
