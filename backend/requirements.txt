@@ -1,0 +1,4 @@
+flask==3.0.2
+flask-cors==4.0.0
+psutil==5.9.8
+python-dotenv==1.0.1 

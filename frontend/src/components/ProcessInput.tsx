@@ -1,16 +1,26 @@
 import { Stack, Tooltip } from "@mui/material";
 import { useState } from "react";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import { schedulingService } from "../services/SchedulingService";
 
 import "../style/custom-scrollbar.css";
 
 // Use unique IDs that don't change when reindexing
 let nextId = 2; // Start with 2 since we already have process 1
 
-const ProcessInput = () => {
+interface ProcessInputProps {
+  onSimulationResult: (result: any) => void;
+  selectedAlgorithm: string;
+}
+
+const ProcessInput: React.FC<ProcessInputProps> = ({
+  onSimulationResult,
+  selectedAlgorithm,
+}) => {
   const [processes, setProcesses] = useState([
-    { id: 1, index: 1, arrival: "", burst: "", priority: "" },
+    { id: 1, index: 1, arrival: "0", burst: "0", priority: "0" },
   ]);
+  const [isSimulating, setIsSimulating] = useState(false);
 
   const addProcess = () => {
     const newId = nextId++;
@@ -19,9 +29,9 @@ const ProcessInput = () => {
       {
         id: newId,
         index: processes.length + 1,
-        arrival: "",
-        burst: "",
-        priority: "",
+        arrival: "0",
+        burst: "0",
+        priority: "0",
       },
     ]);
   };
@@ -50,6 +60,35 @@ const ProcessInput = () => {
         process.id === id ? { ...process, [field]: value } : process
       )
     );
+  };
+
+  const startSimulation = async () => {
+    try {
+      setIsSimulating(true);
+
+      // Format processes for the backend
+      const formattedProcesses = processes.map((p) => ({
+        id: p.id,
+        arrival_time: parseInt(p.arrival) || 0,
+        burst_time: parseInt(p.burst) || 0,
+        priority: parseInt(p.priority) || 0,
+      }));
+
+      // Call backend API
+      const result = await schedulingService.simulateScheduling(
+        formattedProcesses,
+        selectedAlgorithm,
+        selectedAlgorithm === "rr" ? 2 : undefined // Default time quantum for Round Robin
+      );
+
+      // Pass results to parent component
+      onSimulationResult(result);
+    } catch (error) {
+      console.error("Simulation failed:", error);
+      // You might want to show an error message to the user here
+    } finally {
+      setIsSimulating(false);
+    }
   };
 
   return (
@@ -177,8 +216,12 @@ const ProcessInput = () => {
 
       <footer className="items-end text-">
         {/* Button to start simulation */}
-        <button className="absolute group flex items-center gap-2 z-10 bottom-8 left-90 text-[#242A2D] text-[14px] hover:text-[#60E2AE] cursor-pointer">
-          START SIMULATION{" "}
+        <button
+          onClick={startSimulation}
+          disabled={isSimulating}
+          className="absolute group flex items-center gap-2 z-10 bottom-8 left-90 text-[#242A2D] text-[14px] hover:text-[#60E2AE] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isSimulating ? "SIMULATING..." : "START SIMULATION"}
           <img
             src="/arrow-right.svg"
             alt="arrow"
