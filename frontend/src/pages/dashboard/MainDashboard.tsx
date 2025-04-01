@@ -4,41 +4,7 @@ import ProcessInput from "../../components/ProcessInput";
 import ProcessGraph from "../../components/ProcessGraph";
 import { useState } from "react";
 import "../../style/custom-scrollbar.css"; // Import global styles
-
-interface SimulationResult {
-  algorithm: string;
-  system_info: {
-    cores: number;
-    cpu_model: string;
-    architecture: string;
-  };
-  average_metrics: {
-    waiting_time: number;
-    response_time: number;
-    turnaround_time: number;
-    throughput: number;
-    cpu_utilization: number;
-  };
-  process_results: Array<{
-    id: number;
-    waiting_time: number;
-    response_time: number;
-    completion_time: number;
-    turnaround_time: number;
-    cpu_core: number;
-    start_time: number;
-    end_time: number;
-  }>;
-  timeline: {
-    [key: string]: {
-      processes: Array<{
-        id: number;
-        start_time: number;
-        end_time: number;
-      }>;
-    };
-  };
-}
+import { SimulationResult } from "../../types/SimulationObject";
 
 const MainDashboard = () => {
   const [selectedAlgorithm, setSelectedAlgorithm] = useState("fcfs");
@@ -69,15 +35,19 @@ const MainDashboard = () => {
         sx={{
           display: "flex",
           flexDirection: { xs: "column", sm: "column", md: "row" },
-          alignItems: { xs: "stretch", md: "flex-start" },
-          justifyContent: { xs: "flex-start", md: "flex-start" },
-          overflowY: "auto",
-          overflowX: "hidden",
-          flex: 1,
-          width: "100%",
+          alignItems: "stretch",
+          height: "calc(100vh - 64px)", // Adjust this value based on your header height
+          overflow: "hidden", // Prevent double scrolling
         }}
       >
-        <Box className="custom-scrollbar border-r-2 border-[#242A2D] h-screen">
+        <Box
+          className="custom-scrollbar border-r-2 border-[#242A2D]"
+          sx={{
+            width: "500px",
+            flexShrink: 0,
+            height: "100%",
+          }}
+        >
           <ProcessInput
             onSimulationResult={handleSimulationResult}
             selectedAlgorithm={selectedAlgorithm}
@@ -86,12 +56,9 @@ const MainDashboard = () => {
         <Box
           className="custom-scrollbar"
           sx={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
             flex: 1,
-            width: "100%",
+            height: "100%",
+            overflow: "auto", // Change from "hidden" to "auto" to enable scrolling
           }}
         >
           <ProcessGraph

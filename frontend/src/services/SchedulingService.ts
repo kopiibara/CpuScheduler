@@ -41,25 +41,26 @@ interface SimulationResult {
 }
 
 class SchedulingService {
-  private baseUrl = "http://localhost:5000/api";
-
   public async simulateScheduling(
     processes: Process[],
     algorithm: string,
     timeQuantum?: number
   ): Promise<SimulationResult> {
     try {
-      const response = await fetch(`${this.baseUrl}/simulate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          processes,
-          algorithm,
-          timeQuantum,
-        }),
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/simulate`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            processes,
+            algorithm,
+            timeQuantum,
+          }),
+        }
+      );
 
       if (!response.ok) {
         const error = await response.json();

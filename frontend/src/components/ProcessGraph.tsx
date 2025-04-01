@@ -1,6 +1,5 @@
 import { Stack } from "@mui/material";
 import DropDownMenu from "./DropdownMenu";
-import { useEffect } from "react";
 import GanttChart from "./GanttChart";
 import {
   LineChart,
@@ -12,41 +11,9 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { SimulationResult } from "../types/SimulationObject";
 
-interface SimulationResult {
-  algorithm: string;
-  system_info: {
-    cores: number;
-    cpu_model: string;
-    architecture: string;
-  };
-  average_metrics: {
-    waiting_time: number;
-    response_time: number;
-    turnaround_time: number;
-    throughput: number;
-    cpu_utilization: number;
-  };
-  process_results: Array<{
-    id: number;
-    waiting_time: number;
-    response_time: number;
-    completion_time: number;
-    turnaround_time: number;
-    cpu_core: number;
-    start_time: number;
-    end_time: number;
-  }>;
-  timeline: {
-    [key: string]: {
-      processes: Array<{
-        id: number;
-        start_time: number;
-        end_time: number;
-      }>;
-    };
-  };
-}
+import "../style/custom-scrollbar.css";
 
 interface ProcessGraphProps {
   selectedAlgorithm: string;
@@ -81,14 +48,28 @@ const ProcessGraph: React.FC<ProcessGraphProps> = ({
   const getGanttChartData = () => {
     if (!simulationResult) return null;
 
+    // Create a mapping of process IDs to sequential indices
+    // Add proper typing for the object
+    const processIdToIndex: Record<number, number> = {};
+    let nextIndex = 1;
+
+    // Collect all unique process IDs from the timeline
+    Object.values(simulationResult.timeline).forEach((timeline) => {
+      timeline.processes.forEach((process) => {
+        if (!processIdToIndex[process.id]) {
+          processIdToIndex[process.id] = nextIndex++;
+        }
+      });
+    });
+
     const data: { [key: string]: any[] } = {};
     Object.entries(simulationResult.timeline).forEach(([core, timeline]) => {
       data[`cpu${parseInt(core) + 1}`] = timeline.processes.map((process) => ({
         id: `p${process.id}-${core}`,
-        name: `P${process.id}`,
+        name: `P${processIdToIndex[process.id]}`, // Use index instead of raw ID
         startTime: process.start_time,
         duration: process.end_time - process.start_time,
-        color: getProcessColor(process.id),
+        color: getProcessColor(processIdToIndex[process.id]), // Use index for colors too
       }));
     });
     return data;
@@ -106,17 +87,10 @@ const ProcessGraph: React.FC<ProcessGraphProps> = ({
     }));
   };
 
-  // Log system information to console
-  useEffect(() => {
-    if (simulationResult) {
-      console.log("System Information:", simulationResult.system_info);
-    }
-  }, [simulationResult]);
-
   return (
     <Stack
       spacing={3}
-      className="py-6 px-10 w-full h-[100vh] overflow-y-auto custom-scrollbar"
+      className="py-6 px-10 w-full h-full overflow-y-auto custom-scrollbar"
     >
       <Stack
         direction={"row"}
@@ -124,9 +98,9 @@ const ProcessGraph: React.FC<ProcessGraphProps> = ({
         alignItems="center"
         justifyContent="space-between"
       >
-        <Stack spacing={1}>
+        <Stack spacing={0.25}>
           <p className="text-[#FBFCFA] text-[16px] font-[600]">TIME GRAPH</p>
-          <p className="text-[#7F8588] text-[14px] font-['Inter']">
+          <p className="text-[#7F8588] text-[13px] font-['Inter']">
             Visualize process execution timeline and scheduling sequence.
           </p>
         </Stack>
@@ -139,7 +113,7 @@ const ProcessGraph: React.FC<ProcessGraphProps> = ({
       </Stack>
 
       {/* Time Graph Container */}
-      <div className="bg-[#1A1D1F] rounded-lg p-6 mb-4">
+      <div className="bg-[#1A1D1F] rounded-[8px] p-6 mb-4">
         {simulationResult ? (
           <div className="space-y-4">
             <div className="h-[300px]">
@@ -200,9 +174,9 @@ const ProcessGraph: React.FC<ProcessGraphProps> = ({
             </div>
           </div>
         ) : (
-          <div className="h-[400px] flex items-center justify-center">
+          <div className="h-20 flex items-center justify-center">
             <p className="text-[#7F8588]">
-              Add processes and start simulation to view results
+              Add processes and start simulation to view result.{" "}
             </p>
           </div>
         )}
@@ -217,23 +191,30 @@ const ProcessGraph: React.FC<ProcessGraphProps> = ({
       </Stack>
 
       {/* Gantt Chart Container */}
-      <div className="bg-[#1A1D1F] rounded-lg p-6">
-        <div className="space-y-6">
-          {simulationResult && getGanttChartData() ? (
-            Object.entries(getGanttChartData()!).map(([cpuId, processes]) => (
-              <GanttChart
-                key={cpuId}
-                processes={processes}
-                cpuId={cpuId.toUpperCase()}
-              />
-            ))
-          ) : (
-            <div className="h-20 flex items-center justify-center">
-              <p className="text-[#7F8588]">
-                Gantt chart will appear after simulation
-              </p>
-            </div>
-          )}
+      <div className="bg-[#1A1D1F] rounded-[8px] p-6">
+        <div className="overflow-x-auto">
+          <div className="space-y-6">
+            {(() => {
+              const ganttData = getGanttChartData();
+              if (!simulationResult || !ganttData) {
+                return (
+                  <div className="h-20 flex items-center justify-center">
+                    <p className="text-[#7F8588]">
+                      Gantt chart will appear after simulation
+                    </p>
+                  </div>
+                );
+              }
+
+              return Object.entries(ganttData).map(([cpuId, processes]) => (
+                <GanttChart
+                  key={cpuId}
+                  processes={processes}
+                  cpuId={cpuId.toUpperCase()}
+                />
+              ));
+            })()}
+          </div>
         </div>
       </div>
     </Stack>

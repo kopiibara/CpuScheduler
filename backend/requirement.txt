@@ -1,5 +1,0 @@
-fastapi
-uvicorn
-pandas
-psutil
-python-multipart  # For handling file uploads

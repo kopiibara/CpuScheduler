@@ -1,6 +1,7 @@
 import { Stack, Box, LinearProgress } from "@mui/material";
 import { useEffect } from "react";
 import { useSystemInfoFetch } from "../../hooks/useSystemInfoFetch";
+import WindowButtons from "../../components/WindowButtons";
 
 const WelcomePage = () => {
   const { fetchProgress, fetchSystemInfo } = useSystemInfoFetch(3000); // 3 seconds minimum loading time
@@ -14,12 +15,18 @@ const WelcomePage = () => {
     <Box
       sx={{
         display: "flex",
+        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         minHeight: "100vh",
         width: "100vw",
       }}
     >
+      <Box className="absolute top-0 right-0 pt-4">
+        <WindowButtons />
+      </Box>
+
+      {/* Background image */}
       <Stack
         spacing={3}
         alignItems="center"
