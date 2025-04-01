@@ -19,16 +19,16 @@ const ProcessGraph = () => {
   };
 
   return (
-    <Stack spacing={3} className="py-6 px-10 w-full">
+    <Stack spacing={3} className="py-5 px-10 w-full">
       <Stack
         direction={"row"}
         spacing={2}
         alignItems="center"
         justifyContent="space-between"
       >
-        <Stack spacing={1}>
+        <Stack spacing={0.25}>
           <p className="text-[#FBFCFA] text-[16px] font-[600]">TIME GRAPH</p>
-          <p className="text-[#7F8588] text-[14px] font-['Inter']">
+          <p className="text-[#7F8588] text-[13px] font-['Inter']">
             Visualize process execution timeline and scheduling sequence.
           </p>
         </Stack>

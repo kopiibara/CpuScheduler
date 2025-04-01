@@ -55,7 +55,7 @@ const ProcessInput = () => {
   return (
     <Stack
       spacing={4}
-      className="h-full flex flex-col overflow-hidden w-auto py-6 px-10"
+      className="h-full flex flex-col overflow-hidden w-auto py-5 px-10"
     >
       {/* Header section */}
       <header>
@@ -66,9 +66,9 @@ const ProcessInput = () => {
           alignItems={"center"}
           justifyContent={"space-between"}
         >
-          <Stack spacing={1}>
+          <Stack spacing={0.25}>
             <p className="text-[#FBFCFA] text-[16px] font-[600]">ADD PROCESS</p>
-            <p className="text-[#7F8588] text-[14px] font-['Inter']">
+            <p className="text-[#7F8588] text-[13px] font-['Inter']">
               Input the following details to start simulation.
             </p>
           </Stack>
@@ -93,7 +93,7 @@ const ProcessInput = () => {
           >
             <button
               onClick={addProcess}
-              className="bg-white w-8 h-8 rounded-lg font-semibold hover:bg-[#60E2AE] transition-all duration-200 flex items-center justify-center"
+              className="bg-white w-8 h-8 rounded-lg font-semibold hover:bg-[#60E2AE] transition-all duration-200 flex items-center justify-center cursor-pointer"
             >
               <AddRoundedIcon fontSize="small" />
             </button>
@@ -164,7 +164,7 @@ const ProcessInput = () => {
               {processes.length > 1 && (
                 <button
                   onClick={() => removeProcess(process.id)}
-                  className="rounded-[8px] p-2 h-fit w-fit flex items-center justify-center hover:bg-[#1E1619] hover:scale-105 transition-all duration-200 ease-in"
+                  className="rounded-[8px] p-2 h-fit w-fit cursor-pointer flex items-center justify-center hover:bg-[#1E1619] hover:scale-105 transition-all duration-200 ease-in"
                 >
                   <img src="/trash.svg" alt="trash" className="w-5" />
                 </button>
@@ -175,7 +175,7 @@ const ProcessInput = () => {
         </div>
       </body>
 
-      <footer className="items-end text-">
+      <footer className="items-end">
         {/* Button to start simulation */}
         <button className="absolute group flex items-center gap-2 z-10 bottom-8 left-90 text-[#242A2D] text-[14px] hover:text-[#60E2AE] cursor-pointer">
           START SIMULATION{" "}

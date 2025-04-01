@@ -33,6 +33,8 @@ function createWindow() {
     icon: path.join(process.env.VITE_PUBLIC, "cpuScheduler-icon.ico"),
     width: 1400, // Default width of the window
     height: 800,
+    minWidth: 1200, // Minimum width of the window
+    minHeight: 800, // Minimum height of the window
     resizable: false, // Allow window resizing
     frame: false, // Remove default window frame
     webPreferences: {
