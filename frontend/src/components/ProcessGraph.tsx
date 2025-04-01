@@ -19,19 +19,25 @@ const ProcessGraph = () => {
   };
 
   return (
-    <Stack spacing={3} className="py-6 px-10 w-full ">
-      <Stack direction={"row"} spacing={2} alignItems="center">
-        <p className="text-[#FBFCFA] text-[18px] font-medium">Time Graph</p>
-        <Box flex={1} />
-        <Stack direction={"row"} spacing={2} alignItems="center">
-          <p className="text-[#7F8588] text-[14px]">CPU Algorithm:</p>
-          <DropDownMenu
-            menuItems={cpuAlgorithms}
-            value={selectedAlgorithm}
-            hoverOpen
-            onChange={handleAlgorithmChange}
-          />
+    <Stack spacing={3} className="py-6 px-10 w-full">
+      <Stack
+        direction={"row"}
+        spacing={2}
+        alignItems="center"
+        justifyContent="space-between"
+      >
+        <Stack spacing={1}>
+          <p className="text-[#FBFCFA] text-[16px] font-[600]">TIME GRAPH</p>
+          <p className="text-[#7F8588] text-[14px] font-['Inter']">
+            Visualize process execution timeline and scheduling sequence.
+          </p>
         </Stack>
+        <DropDownMenu
+          menuItems={cpuAlgorithms}
+          value={selectedAlgorithm}
+          hoverOpen
+          onChange={handleAlgorithmChange}
+        />
       </Stack>
 
       {/* Placeholder for the process visualization */}
