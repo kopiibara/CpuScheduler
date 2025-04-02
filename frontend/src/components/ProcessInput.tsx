@@ -28,6 +28,7 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [abortController, setAbortController] =
     useState<AbortController | null>(null);
+  const [quantumTime, setQuantumTime] = useState("2"); // Default quantum time for RR
 
   const { sortedProcesses, sortState, toggleSort, resetSort } = useProcessSorting(processes);
 
@@ -91,6 +92,15 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
         return;
       }
 
+      // Validate quantum time for Round Robin
+      if (selectedAlgorithm === "rr") {
+        const quantum = parseInt(quantumTime);
+        if (isNaN(quantum) || quantum <= 0) {
+          setErrorMessage("Quantum time must be a positive number");
+          return;
+        }
+      }
+
       // Create new AbortController for this simulation
       const controller = new AbortController();
       setAbortController(controller);
@@ -108,11 +118,11 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
       console.log("Sending processes to backend:", formattedProcesses);
       console.log("Selected algorithm:", selectedAlgorithm);
 
-      // Call backend API with abort signal
+      // Call backend API with abort signal and dynamic quantum time
       const result = await schedulingService.simulateScheduling(
         formattedProcesses,
         selectedAlgorithm,
-        selectedAlgorithm === "rr" ? 2 : undefined,
+        selectedAlgorithm === "rr" ? parseInt(quantumTime) : undefined,
         controller.signal
       );
 
@@ -387,7 +397,22 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
       <footer className="flex items-end">
         {/* Button to start simulation */}
         <Box flex={1} /> {/* Spacer to push button to the bottom */}
-        <Stack direction="row" spacing={2}>
+        <Stack direction="row" spacing={2} alignItems="center">
+          {selectedAlgorithm === "rr" && (
+            <div className="flex items-center gap-2">
+              <label htmlFor="quantum-time" className="text-[#FBFCFA] text-[13px]">
+                Quantum Time:
+              </label>
+              <input
+                id="quantum-time"
+                type="number"
+                value={quantumTime}
+                onChange={(e) => setQuantumTime(e.target.value)}
+                className="bg-[#242A2D] text-white p-1 rounded-[8px] w-[60px] outline-none border-2 border-transparent hover:border-[#60E2AE] focus:border-[#60E2AE] transition-colors duration-200"
+                min="1"
+              />
+            </div>
+          )}
           {isSimulating && (
             <button
               onClick={stopSimulation}
