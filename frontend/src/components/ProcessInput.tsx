@@ -23,6 +23,8 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
   ]);
   const [isSimulating, setIsSimulating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [abortController, setAbortController] =
+    useState<AbortController | null>(null);
 
   const addProcess = () => {
     const newId = nextId++;
@@ -64,6 +66,14 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
     );
   };
 
+  const stopSimulation = () => {
+    if (abortController) {
+      abortController.abort();
+      setIsSimulating(false);
+      setAbortController(null);
+    }
+  };
+
   const startSimulation = async () => {
     try {
       // Validate process values first
@@ -76,6 +86,9 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
         return;
       }
 
+      // Create new AbortController for this simulation
+      const controller = new AbortController();
+      setAbortController(controller);
       setIsSimulating(true);
       setErrorMessage(null);
 
@@ -87,20 +100,39 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
         priority: parseInt(p.priority) || 0,
       }));
 
-      // Call backend API
+      console.log("Sending processes to backend:", formattedProcesses);
+      console.log("Selected algorithm:", selectedAlgorithm);
+
+      // Call backend API with abort signal
       const result = await schedulingService.simulateScheduling(
         formattedProcesses,
         selectedAlgorithm,
-        selectedAlgorithm === "rr" ? 2 : undefined
+        selectedAlgorithm === "rr" ? 2 : undefined,
+        controller.signal
       );
+
+      console.log("Received result from backend:", result);
+
+      if (!result || !result.timeline || !result.process_results) {
+        throw new Error("Invalid response from backend");
+      }
 
       // Pass results to parent component
       onSimulationResult(result);
     } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        console.log("Simulation stopped by user");
+        return;
+      }
       console.error("Simulation failed:", error);
-      setErrorMessage("Simulation failed. Please try again.");
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Simulation failed. Please try again."
+      );
     } finally {
       setIsSimulating(false);
+      setAbortController(null);
     }
   };
 
@@ -321,23 +353,43 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
       <footer className="flex items-end">
         {/* Button to start simulation */}
         <Box flex={1} /> {/* Spacer to push button to the bottom */}
-        <button
-          onClick={startSimulation}
-          disabled={isSimulating}
-          className="group flex items-center gap-2 text-[#242A2D] text-[14px] hover:text-[#60E2AE] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isSimulating ? "SIMULATING..." : "START SIMULATION"}
-          <img
-            src="/arrow-right.svg"
-            alt="arrow"
-            className="w-4 h-auto block group-hover:hidden transition-all duration-200"
-          />
-          <img
-            src="/arrow-right-light.svg"
-            alt="arrow"
-            className="w-4 h-auto hidden group-hover:block transition-all duration-200"
-          />
-        </button>
+        <Stack direction="row" spacing={2}>
+          {isSimulating && (
+            <button
+              onClick={stopSimulation}
+              className="group flex items-center gap-2 text-[#242A2D] text-[14px] hover:text-[#E26062] cursor-pointer"
+            >
+              STOP SIMULATION
+              <img
+                src="/stop.svg"
+                alt="stop"
+                className="w-4 h-auto block group-hover:hidden transition-all duration-200"
+              />
+              <img
+                src="/stop-light.svg"
+                alt="stop"
+                className="w-4 h-auto hidden group-hover:block transition-all duration-200"
+              />
+            </button>
+          )}
+          <button
+            onClick={startSimulation}
+            disabled={isSimulating}
+            className="group flex items-center gap-2 text-[#242A2D] text-[14px] hover:text-[#60E2AE] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSimulating ? "SIMULATING..." : "START SIMULATION"}
+            <img
+              src="/arrow-right.svg"
+              alt="arrow"
+              className="w-4 h-auto block group-hover:hidden transition-all duration-200"
+            />
+            <img
+              src="/arrow-right-light.svg"
+              alt="arrow"
+              className="w-4 h-auto hidden group-hover:block transition-all duration-200"
+            />
+          </button>
+        </Stack>
       </footer>
     </Stack>
   );

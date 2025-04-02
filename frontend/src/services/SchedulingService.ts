@@ -44,7 +44,8 @@ class SchedulingService {
   public async simulateScheduling(
     processes: Process[],
     algorithm: string,
-    timeQuantum?: number
+    timeQuantum?: number,
+    signal?: AbortSignal
   ): Promise<SimulationResult> {
     try {
       const response = await fetch(
@@ -59,6 +60,7 @@ class SchedulingService {
             algorithm,
             timeQuantum,
           }),
+          signal,
         }
       );
 
@@ -69,6 +71,9 @@ class SchedulingService {
 
       return await response.json();
     } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        throw error;
+      }
       console.error("Scheduling simulation error:", error);
       throw error;
     }
