@@ -5,6 +5,9 @@ import CloseIcon from "@mui/icons-material/CloseRounded";
 import { schedulingService } from "../services/SchedulingService";
 import ShuffleIcon from "@mui/icons-material/ShuffleRounded";
 import "../style/custom-scrollbar.css";
+import { useProcessSorting } from "../hooks/useProcessSorting";
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 
 // Use unique IDs that don't change when reindexing
 let nextId = 2; // Start with 2 since we already have process 1
@@ -25,6 +28,8 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [abortController, setAbortController] =
     useState<AbortController | null>(null);
+
+  const { sortedProcesses, sortState, toggleSort, resetSort } = useProcessSorting(processes);
 
   const addProcess = () => {
     const newId = nextId++;
@@ -165,6 +170,35 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
     }
   };
 
+  const SortableColumnHeader = ({ field, label }: { field: 'arrival' | 'burst' | 'priority', label: string }) => (
+    <div 
+      className="text-[#FBFCFA] text-[13px] cursor-pointer hover:text-[#60E2AE] transition-colors duration-200 flex items-center gap-1"
+      onClick={() => toggleSort(field)}
+    >
+      {label}
+      {sortState.field === field && (
+        sortState.direction === 'asc' ? 
+          <ArrowUpwardIcon fontSize="small" /> : 
+          <ArrowDownwardIcon fontSize="small" />
+      )}
+    </div>
+  );
+
+  const ProcessIdHeader = () => (
+    <div 
+      className="text-[#FBFCFA] text-[13px] cursor-pointer hover:text-[#60E2AE] transition-colors duration-200 flex items-center gap-1"
+      onClick={resetSort}
+    >
+      {sortState.field ? (
+        <Tooltip title="Click to reset sorting" arrow placement="bottom">
+          <span>PROCESS ID</span>
+        </Tooltip>
+      ) : (
+        "PROCESS ID"
+      )}
+    </div>
+  );
+
   return (
     <Stack
       spacing={3}
@@ -251,10 +285,10 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
             gap: "10px",
           }}
         >
-          <div className="text-[#FBFCFA] text-[13px]">PROCESS ID</div>
-          <div className="text-[#FBFCFA] text-[13px]">ARRIVAL TIME</div>
-          <div className="text-[#FBFCFA] text-[13px]">BURST TIME</div>
-          <div className="text-[#FBFCFA] text-[13px]">PRIORITY</div>
+          <ProcessIdHeader />
+          <SortableColumnHeader field="arrival" label="ARRIVAL TIME" />
+          <SortableColumnHeader field="burst" label="BURST TIME" />
+          <SortableColumnHeader field="priority" label="PRIORITY" />
           <div className="text-[#FBFCFA] text-[13px]">
             {processes.length > 2 && (
               <Tooltip
@@ -292,7 +326,7 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
           className="overflow-y-auto custom-scrollbar overflow-x-hidden"
           style={{ maxHeight: "100%" }}
         >
-          {processes.map((process) => (
+          {sortedProcesses.map((process) => (
             <div
               key={process.id}
               className="grid items-center w-full mb-3"
