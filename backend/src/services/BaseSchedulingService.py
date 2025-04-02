@@ -1,42 +1,11 @@
-from typing import Dict, List, Optional, Any
-import psutil  # Import to get CPU core count dynamically
-from .FCFSService import FCFSService
-from .SJFService import SJFService
-from .PriorityService import PriorityService
-from .RoundRobinService import RoundRobinService
-from .SRTFService import SRTFService
+from typing import Dict, List, Any
+import psutil
 
-class SchedulingService:
+class BaseSchedulingService:
     def __init__(self):
         # Get the actual number of CPU cores from the system
         self.cpu_cores = max(1, psutil.cpu_count(logical=False) or 1)
-        self.fcfs_service = FCFSService()
-        self.sjf_service = SJFService()
-        self.priority_service = PriorityService()
-        self.round_robin_service = RoundRobinService()
-        self.srtf_service = SRTFService()
     
-    def fcfs(self, processes: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """First Come First Serve scheduling algorithm with multi-core support"""
-        return self.fcfs_service.schedule(processes)
-    
-    def sjf(self, processes: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Shortest Job First scheduling with multi-core support"""
-        return self.sjf_service.schedule(processes)
-    
-    def priority(self, processes: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Priority scheduling algorithm with multi-core support"""
-        return self.priority_service.schedule(processes)
-    
-    def round_robin(self, processes: List[Dict[str, Any]], time_quantum: int) -> Dict[str, Any]:
-        """Round Robin scheduling algorithm with multi-core support"""
-        return self.round_robin_service.schedule(processes, time_quantum)
-    
-    def srtf(self, processes: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Shortest Remaining Time First scheduling with multi-core support"""
-        return self.srtf_service.schedule(processes)
-
-    # Update _calculate_metrics to include core ID in results
     def _calculate_metrics(self, processes, timeline, cpu_core=0):
         """Calculate waiting time, turnaround time, etc. for each process"""
         process_results = []
@@ -108,4 +77,4 @@ class SchedulingService:
             "avg_turnaround_time": total_turnaround / count,
             "avg_response_time": total_response / count,
             "avg_waiting_time": total_waiting / count
-        }
+        } 

@@ -44,6 +44,7 @@ function createWindow() {
 
   // Center the window
   win.center();
+  win.webContents.openDevTools();
 
   // Remove the application menu bar
   Menu.setApplicationMenu(null);
