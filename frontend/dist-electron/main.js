@@ -5,7 +5,7 @@ import { spawn as g } from "child_process";
 import b from "node:http";
 const x = o.dirname(w(import.meta.url));
 process.env.APP_ROOT = o.join(x, "..");
-const c = process.env.VITE_DEV_SERVER_URL, S = o.join(process.env.APP_ROOT, "dist-electron"), f = o.join(process.env.APP_ROOT, "dist");
+const c = process.env.VITE_DEV_SERVER_URL, z = o.join(process.env.APP_ROOT, "dist-electron"), f = o.join(process.env.APP_ROOT, "dist");
 process.env.VITE_PUBLIC = c ? o.join(process.env.APP_ROOT, "public") : f;
 let e, n = null, r = !1;
 a.whenReady().then(() => {
@@ -73,7 +73,7 @@ function d(i = !1) {
       nodeIntegration: !1,
       contextIsolation: !0
     }
-  }), e.center(), u.setApplicationMenu(null), e.on("maximize", () => {
+  }), e.center(), e.webContents.openDevTools(), u.setApplicationMenu(null), e.on("maximize", () => {
     e == null || e.webContents.send("window-state-changed", { isMaximized: !0 });
   }), e.on("unmaximize", () => {
     e == null || e.webContents.send("window-state-changed", { isMaximized: !1 });
@@ -107,7 +107,7 @@ a.on("activate", () => {
   p.getAllWindows().length === 0 && d();
 });
 export {
-  S as MAIN_DIST,
+  z as MAIN_DIST,
   f as RENDERER_DIST,
   c as VITE_DEV_SERVER_URL
 };

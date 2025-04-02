@@ -1,272 +1,40 @@
 from typing import Dict, List, Optional, Any
 import psutil  # Import to get CPU core count dynamically
+from .FCFSService import FCFSService
+from .SJFService import SJFService
+from .PriorityService import PriorityService
+from .RoundRobinService import RoundRobinService
+from .SRTFService import SRTFService
 
 class SchedulingService:
     def __init__(self):
         # Get the actual number of CPU cores from the system
         self.cpu_cores = max(1, psutil.cpu_count(logical=False) or 1)
+        self.fcfs_service = FCFSService()
+        self.sjf_service = SJFService()
+        self.priority_service = PriorityService()
+        self.round_robin_service = RoundRobinService()
+        self.srtf_service = SRTFService()
     
     def fcfs(self, processes: List[Dict[str, Any]]) -> Dict[str, Any]:
         """First Come First Serve scheduling algorithm with multi-core support"""
-        # Sort processes by arrival time
-        sorted_processes = sorted(processes, key=lambda p: p['arrival_time'])
-        
-        # Initialize timelines for all CPU cores
-        timelines = {str(i): {"processes": []} for i in range(self.cpu_cores)}
-        core_times = {str(i): 0 for i in range(self.cpu_cores)}
-        process_results = []
-        
-        for process in sorted_processes:
-            # Find the core with earliest available time
-            available_core = min(core_times, key=core_times.get)
-            
-            # If there's a gap due to arrival time, adjust core time
-            if process["arrival_time"] > core_times[available_core]:
-                core_times[available_core] = process["arrival_time"]
-                
-            # Add process to timeline for this core
-            timelines[available_core]["processes"].append({
-                "id": process["id"],
-                "start_time": core_times[available_core],
-                "end_time": core_times[available_core] + process["burst_time"]
-            })
-            
-            # Update core time
-            core_times[available_core] += process["burst_time"]
-        
-        # Calculate metrics for each process
-        for core_id, timeline in timelines.items():
-            process_results.extend(self._calculate_metrics(sorted_processes, timeline, int(core_id)))
-        
-        return {
-            "timeline": timelines,
-            "process_results": process_results,
-            "metrics": self._calculate_average_metrics(process_results)
-        }
-
+        return self.fcfs_service.schedule(processes)
+    
     def sjf(self, processes: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Shortest Job First scheduling with multi-core support"""
-        # Create a copy of the processes to avoid modifying the original
-        processes_copy = [p.copy() for p in processes]
-        
-        # Sort initially by arrival time
-        processes_copy.sort(key=lambda p: p['arrival_time'])
-        
-        # Initialize timelines for all CPU cores
-        timelines = {str(i): {"processes": []} for i in range(self.cpu_cores)}
-        core_times = {str(i): 0 for i in range(self.cpu_cores)}
-        
-        completed = []
-        
-        # Continue until all processes are completed
-        while len(completed) < len(processes_copy):
-            # For each core, check if it can process something
-            for core_id in range(self.cpu_cores):
-                core_id_str = str(core_id)
-                current_time = core_times[core_id_str]
-                
-                # Find processes that have arrived by this core's current time
-                ready_queue = [p for p in processes_copy if p['arrival_time'] <= current_time and 
-                               p not in completed]
-                
-                if ready_queue:
-                    # Sort ready queue by burst time (shortest first)
-                    ready_queue.sort(key=lambda p: p['burst_time'])
-                    
-                    # Get the process with shortest burst time
-                    process = ready_queue[0]
-                    processes_copy.remove(process)
-                    
-                    # Add to timeline
-                    timelines[core_id_str]["processes"].append({
-                        "id": process["id"],
-                        "start_time": current_time,
-                        "end_time": current_time + process["burst_time"]
-                    })
-                    
-                    # Update current time for this core
-                    core_times[core_id_str] += process["burst_time"]
-                    completed.append(process)
-                elif processes_copy and all(p in completed for p in processes_copy):
-                    # All processes accounted for
-                    break
-                else:
-                    # Find next arrival time for this core
-                    remaining = [p for p in processes_copy if p not in completed]
-                    if remaining:
-                        next_arrival = min(p['arrival_time'] for p in remaining)
-                        core_times[core_id_str] = max(core_times[core_id_str], next_arrival)
-            
-            # If we've processed all processes, break the loop
-            if len(completed) == len(processes):
-                break
-        
-        # Calculate metrics for each process
-        process_results = []
-        for core_id, timeline in timelines.items():
-            process_results.extend(self._calculate_metrics(processes, timeline, int(core_id)))
-        
-        return {
-            "timeline": timelines,
-            "process_results": process_results,
-            "metrics": self._calculate_average_metrics(process_results)
-        }
-
+        return self.sjf_service.schedule(processes)
+    
     def priority(self, processes: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Priority scheduling algorithm with multi-core support"""
-        # Create a copy of the processes to avoid modifying the original
-        processes_copy = [p.copy() for p in processes]
-        
-        # Sort initially by arrival time
-        processes_copy.sort(key=lambda p: p['arrival_time'])
-        
-        # Initialize timelines for all CPU cores
-        timelines = {str(i): {"processes": []} for i in range(self.cpu_cores)}
-        core_times = {str(i): 0 for i in range(self.cpu_cores)}
-        
-        completed = []
-        
-        # Continue until all processes are completed
-        while len(completed) < len(processes):
-            # For each core, check if it can process something
-            for core_id in range(self.cpu_cores):
-                core_id_str = str(core_id)
-                current_time = core_times[core_id_str]
-                
-                # Find processes that have arrived by this core's current time
-                ready_queue = [p for p in processes_copy if p['arrival_time'] <= current_time and 
-                               p not in completed]
-                
-                if ready_queue:
-                    # Sort ready queue by priority (lower number = higher priority)
-                    ready_queue.sort(key=lambda p: p['priority'])
-                    
-                    # Get the highest priority process
-                    process = ready_queue[0]
-                    processes_copy.remove(process)
-                    
-                    # Add to timeline
-                    timelines[core_id_str]["processes"].append({
-                        "id": process["id"],
-                        "start_time": current_time,
-                        "end_time": current_time + process["burst_time"]
-                    })
-                    
-                    # Update current time for this core
-                    core_times[core_id_str] += process["burst_time"]
-                    completed.append(process)
-                elif processes_copy and all(p in completed for p in processes_copy):
-                    # All processes accounted for
-                    break
-                else:
-                    # Find next arrival time for this core
-                    remaining = [p for p in processes_copy if p not in completed]
-                    if remaining:
-                        next_arrival = min(p['arrival_time'] for p in remaining)
-                        core_times[core_id_str] = max(core_times[core_id_str], next_arrival)
-            
-            # If we've processed all processes, break the loop
-            if len(completed) == len(processes):
-                break
-        
-        # Calculate metrics for each process
-        process_results = []
-        for core_id, timeline in timelines.items():
-            process_results.extend(self._calculate_metrics(processes, timeline, int(core_id)))
-        
-        return {
-            "timeline": timelines,
-            "process_results": process_results,
-            "metrics": self._calculate_average_metrics(process_results)
-        }
-
+        return self.priority_service.schedule(processes)
+    
     def round_robin(self, processes: List[Dict[str, Any]], time_quantum: int) -> Dict[str, Any]:
         """Round Robin scheduling algorithm with multi-core support"""
-        # Create a copy of processes and add remaining_time field
-        processes_copy = [p.copy() for p in processes]
-        for p in processes_copy:
-            p['remaining_time'] = p['burst_time']
-        
-        # Sort by arrival time
-        processes_copy.sort(key=lambda p: p['arrival_time'])
-        
-        # Initialize timelines and ready queues for each core
-        timelines = {str(i): {"processes": []} for i in range(self.cpu_cores)}
-        core_times = {str(i): 0 for i in range(self.cpu_cores)}
-        ready_queues = {str(i): [] for i in range(self.cpu_cores)}
-        
-        # Keep track of original processes data
-        original_processes = {p['id']: p.copy() for p in processes}
-        
-        # Track which processes are completed
-        completed_processes = set()
-        
-        # Keep processing until all processes are completed
-        remaining_processes = processes_copy.copy()
-        
-        while len(completed_processes) < len(processes):
-            # For each core
-            for core_id in range(self.cpu_cores):
-                core_id_str = str(core_id)
-                current_time = core_times[core_id_str]
-                
-                # Add newly arrived processes to this core's queue
-                arrived = [p for p in remaining_processes if p['arrival_time'] <= current_time and 
-                          p['id'] not in completed_processes]
-                
-                for p in arrived:
-                    if p in remaining_processes:
-                        remaining_processes.remove(p)
-                        ready_queues[core_id_str].append(p)
-                
-                # If no processes in ready queue, advance time to next arrival
-                if not ready_queues[core_id_str]:
-                    if remaining_processes:
-                        # Move to next arrival time
-                        next_arrival = min(p['arrival_time'] for p in remaining_processes)
-                        core_times[core_id_str] = max(core_times[core_id_str], next_arrival)
-                    continue
-                
-                # Get the next process from this core's queue
-                process = ready_queues[core_id_str].pop(0)
-                
-                # Calculate execution time for this turn
-                execution_time = min(time_quantum, process['remaining_time'])
-                
-                # Add to timeline
-                timelines[core_id_str]["processes"].append({
-                    "id": process["id"],
-                    "start_time": current_time,
-                    "end_time": current_time + execution_time
-                })
-                
-                # Update current time and remaining time
-                current_time += execution_time
-                process['remaining_time'] -= execution_time
-                core_times[core_id_str] = current_time
-                
-                # Check if process is completed
-                if process['remaining_time'] > 0:
-                    # Put back in queue if not finished, after newly arrived processes
-                    ready_queues[core_id_str].append(process)
-                else:
-                    # Mark as completed
-                    completed_processes.add(process['id'])
-            
-            # If all processes are complete, exit loop
-            if len(completed_processes) == len(processes):
-                break
-                
-        # Calculate metrics for each process
-        process_results = []
-        for core_id, timeline in timelines.items():
-            process_results.extend(self._calculate_metrics(processes, timeline, int(core_id)))
-        
-        return {
-            "timeline": timelines,
-            "process_results": process_results,
-            "metrics": self._calculate_average_metrics(process_results)
-        }
+        return self.round_robin_service.schedule(processes, time_quantum)
+    
+    def srtf(self, processes: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Shortest Remaining Time First scheduling with multi-core support"""
+        return self.srtf_service.schedule(processes)
 
     # Update _calculate_metrics to include core ID in results
     def _calculate_metrics(self, processes, timeline, cpu_core=0):

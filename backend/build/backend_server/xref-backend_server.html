@@ -37172,6 +37172,7 @@ imported by:
  &#8226;   <a href="#psutil._psutil_windows">psutil._psutil_windows</a>
  &#8226;   <a href="#psutil._pswindows">psutil._pswindows</a>
  &#8226;   <a href="#src.controllers.SystemInfoController">src.controllers.SystemInfoController</a>
+ &#8226;   <a href="#src.services.BaseSchedulingService">src.services.BaseSchedulingService</a>
  &#8226;   <a href="#src.services.SchedulingService">src.services.SchedulingService</a>
 
   </div>
@@ -46410,6 +46411,7 @@ imports:
  &#8226;   <a href="#fastapi.responses">fastapi.responses</a>
  &#8226;   <a href="#src.controllers">src.controllers</a>
  &#8226;   <a href="#src.services.SchedulingService">src.services.SchedulingService</a>
+ &#8226;   <a href="#traceback">traceback</a>
 
   </div>
   <div class="import">
@@ -46478,8 +46480,8 @@ imported by:
 
 <div class="node">
   <a name="src.routes"></a>
-  <a target="code" href="-" type="text/plain"><tt>src.routes</tt></a>
-<span class="moduletype">NamespacePackage</span>  <div class="import">
+  <a target="code" href="///D:/VSCode/cpuScheduler/backend/src/routes/__init__.py" type="text/plain"><tt>src.routes</tt></a>
+<span class="moduletype">Package</span>  <div class="import">
 imports:
     <a href="#src">src</a>
  &#8226;   <a href="#src.routes.ProcessRoutes">src.routes.ProcessRoutes</a>
@@ -46557,15 +46559,146 @@ imported by:
 
 <div class="node">
   <a name="src.services"></a>
-  <a target="code" href="-" type="text/plain"><tt>src.services</tt></a>
-<span class="moduletype">NamespacePackage</span>  <div class="import">
+  <a target="code" href="///D:/VSCode/cpuScheduler/backend/src/services/__init__.py" type="text/plain"><tt>src.services</tt></a>
+<span class="moduletype">Package</span>  <div class="import">
 imports:
     <a href="#src">src</a>
+ &#8226;   <a href="#src.services.BaseSchedulingService">src.services.BaseSchedulingService</a>
+ &#8226;   <a href="#src.services.FCFSService">src.services.FCFSService</a>
+ &#8226;   <a href="#src.services.PriorityService">src.services.PriorityService</a>
+ &#8226;   <a href="#src.services.RoundRobinService">src.services.RoundRobinService</a>
+ &#8226;   <a href="#src.services.SJFService">src.services.SJFService</a>
+ &#8226;   <a href="#src.services.SRTFService">src.services.SRTFService</a>
+ &#8226;   <a href="#src.services.SchedulingService">src.services.SchedulingService</a>
 
   </div>
   <div class="import">
 imported by:
-    <a href="#src.services.SchedulingService">src.services.SchedulingService</a>
+    <a href="#src.services.BaseSchedulingService">src.services.BaseSchedulingService</a>
+ &#8226;   <a href="#src.services.FCFSService">src.services.FCFSService</a>
+ &#8226;   <a href="#src.services.PriorityService">src.services.PriorityService</a>
+ &#8226;   <a href="#src.services.RoundRobinService">src.services.RoundRobinService</a>
+ &#8226;   <a href="#src.services.SJFService">src.services.SJFService</a>
+ &#8226;   <a href="#src.services.SRTFService">src.services.SRTFService</a>
+ &#8226;   <a href="#src.services.SchedulingService">src.services.SchedulingService</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="src.services.BaseSchedulingService"></a>
+  <a target="code" href="///D:/VSCode/cpuScheduler/backend/src/services/BaseSchedulingService.py" type="text/plain"><tt>src.services.BaseSchedulingService</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#psutil">psutil</a>
+ &#8226;   <a href="#src.services">src.services</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#src.services">src.services</a>
+ &#8226;   <a href="#src.services.FCFSService">src.services.FCFSService</a>
+ &#8226;   <a href="#src.services.PriorityService">src.services.PriorityService</a>
+ &#8226;   <a href="#src.services.RoundRobinService">src.services.RoundRobinService</a>
+ &#8226;   <a href="#src.services.SJFService">src.services.SJFService</a>
+ &#8226;   <a href="#src.services.SRTFService">src.services.SRTFService</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="src.services.FCFSService"></a>
+  <a target="code" href="///D:/VSCode/cpuScheduler/backend/src/services/FCFSService.py" type="text/plain"><tt>src.services.FCFSService</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#src.services">src.services</a>
+ &#8226;   <a href="#src.services.BaseSchedulingService">src.services.BaseSchedulingService</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#src.services">src.services</a>
+ &#8226;   <a href="#src.services.SchedulingService">src.services.SchedulingService</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="src.services.PriorityService"></a>
+  <a target="code" href="///D:/VSCode/cpuScheduler/backend/src/services/PriorityService.py" type="text/plain"><tt>src.services.PriorityService</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#src.services">src.services</a>
+ &#8226;   <a href="#src.services.BaseSchedulingService">src.services.BaseSchedulingService</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#src.services">src.services</a>
+ &#8226;   <a href="#src.services.SchedulingService">src.services.SchedulingService</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="src.services.RoundRobinService"></a>
+  <a target="code" href="///D:/VSCode/cpuScheduler/backend/src/services/RoundRobinService.py" type="text/plain"><tt>src.services.RoundRobinService</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#src.services">src.services</a>
+ &#8226;   <a href="#src.services.BaseSchedulingService">src.services.BaseSchedulingService</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#src.services">src.services</a>
+ &#8226;   <a href="#src.services.SchedulingService">src.services.SchedulingService</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="src.services.SJFService"></a>
+  <a target="code" href="///D:/VSCode/cpuScheduler/backend/src/services/SJFService.py" type="text/plain"><tt>src.services.SJFService</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#src.services">src.services</a>
+ &#8226;   <a href="#src.services.BaseSchedulingService">src.services.BaseSchedulingService</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#src.services">src.services</a>
+ &#8226;   <a href="#src.services.SchedulingService">src.services.SchedulingService</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="src.services.SRTFService"></a>
+  <a target="code" href="///D:/VSCode/cpuScheduler/backend/src/services/SRTFService.py" type="text/plain"><tt>src.services.SRTFService</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#src.services">src.services</a>
+ &#8226;   <a href="#src.services.BaseSchedulingService">src.services.BaseSchedulingService</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#src.services">src.services</a>
+ &#8226;   <a href="#src.services.SchedulingService">src.services.SchedulingService</a>
 
   </div>
 
@@ -46578,12 +46711,18 @@ imported by:
 imports:
     <a href="#psutil">psutil</a>
  &#8226;   <a href="#src.services">src.services</a>
+ &#8226;   <a href="#src.services.FCFSService">src.services.FCFSService</a>
+ &#8226;   <a href="#src.services.PriorityService">src.services.PriorityService</a>
+ &#8226;   <a href="#src.services.RoundRobinService">src.services.RoundRobinService</a>
+ &#8226;   <a href="#src.services.SJFService">src.services.SJFService</a>
+ &#8226;   <a href="#src.services.SRTFService">src.services.SRTFService</a>
  &#8226;   <a href="#typing">typing</a>
 
   </div>
   <div class="import">
 imported by:
     <a href="#src.controllers.SchedulingController">src.controllers.SchedulingController</a>
+ &#8226;   <a href="#src.services">src.services</a>
 
   </div>
 
@@ -48521,6 +48660,7 @@ imported by:
  &#8226;   <a href="#pydoc">pydoc</a>
  &#8226;   <a href="#site">site</a>
  &#8226;   <a href="#socketserver">socketserver</a>
+ &#8226;   <a href="#src.controllers.SchedulingController">src.controllers.SchedulingController</a>
  &#8226;   <a href="#starlette.middleware.errors">starlette.middleware.errors</a>
  &#8226;   <a href="#starlette.routing">starlette.routing</a>
  &#8226;   <a href="#threading">threading</a>
@@ -49300,6 +49440,12 @@ imported by:
  &#8226;   <a href="#setuptools.warnings">setuptools.warnings</a>
  &#8226;   <a href="#sniffio._impl">sniffio._impl</a>
  &#8226;   <a href="#src.controllers.ProcessController">src.controllers.ProcessController</a>
+ &#8226;   <a href="#src.services.BaseSchedulingService">src.services.BaseSchedulingService</a>
+ &#8226;   <a href="#src.services.FCFSService">src.services.FCFSService</a>
+ &#8226;   <a href="#src.services.PriorityService">src.services.PriorityService</a>
+ &#8226;   <a href="#src.services.RoundRobinService">src.services.RoundRobinService</a>
+ &#8226;   <a href="#src.services.SJFService">src.services.SJFService</a>
+ &#8226;   <a href="#src.services.SRTFService">src.services.SRTFService</a>
  &#8226;   <a href="#src.services.SchedulingService">src.services.SchedulingService</a>
  &#8226;   <a href="#starlette._exception_handler">starlette._exception_handler</a>
  &#8226;   <a href="#starlette._utils">starlette._utils</a>

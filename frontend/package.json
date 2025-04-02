@@ -73,7 +73,7 @@
     "extraResources": [
       {
         "from": "public/backend_server.exe",
-        "to": "backend_server.exe"
+        "to": "resources/backend_server.exe"
       }
     ],
     "compression": "maximum",

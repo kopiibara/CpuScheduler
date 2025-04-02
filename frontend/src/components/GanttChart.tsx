@@ -19,34 +19,29 @@ const GanttChart: React.FC<GanttChartProps> = ({ processes, cpuId }) => {
     0
   );
 
-  // Calculate the step size based on total duration
-  const getStepSize = (duration: number) => {
-    if (duration <= 10) return 1;
-    if (duration <= 50) return 5;
-    if (duration <= 100) return 10;
-    if (duration <= 500) return 50;
-    return 100;
+  // Calculate optimal time unit width based on total duration
+  const calculateTimeUnitWidth = () => {
+    if (totalDuration <= 5) return 80; // Very few time units, make them wider
+    if (totalDuration <= 10) return 60;
+    if (totalDuration <= 20) return 45;
+    if (totalDuration <= 30) return 35;
+    return 30; // Default width for longer durations
   };
 
-  const stepSize = getStepSize(totalDuration);
   const timeScale = Array.from(
-    { length: Math.ceil((totalDuration + 1) / stepSize) },
-    (_, i) => i * stepSize
+    { length: Math.ceil(totalDuration + 1) },
+    (_, i) => i
   );
 
-  // Adjust time unit width based on total duration
-  const getTimeUnitWidth = (duration: number) => {
-    if (duration <= 10) return 24;
-    if (duration <= 50) return 20;
-    if (duration <= 100) return 16;
-    if (duration <= 500) return 12;
-    return 8;
-  };
+  const timeUnitWidth = calculateTimeUnitWidth();
 
-  const timeUnitWidth = getTimeUnitWidth(totalDuration);
+  // Calculate container width with minimum constraint
+  const minContainerWidth = 400; // Minimum width in pixels
+  const calculatedWidth = timeScale.length * timeUnitWidth;
+  const containerWidth = Math.max(minContainerWidth, calculatedWidth);
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-4 w-full">
       {/* CPU Label */}
       <div className="w-16 shrink-0 text-[#7F8588] text-[13px] font-medium">
         {cpuId}
@@ -57,13 +52,19 @@ const GanttChart: React.FC<GanttChartProps> = ({ processes, cpuId }) => {
         {/* Time markers */}
         <div
           className="flex mb-2"
-          style={{ minWidth: timeScale.length * timeUnitWidth * stepSize }}
+          style={{
+            width: containerWidth,
+            minWidth: containerWidth,
+          }}
         >
           {timeScale.map((time) => (
             <div
               key={time}
-              className="text-center text-[10px] text-[#7F8588]"
-              style={{ width: timeUnitWidth * stepSize }}
+              className="text-center text-[11px] text-[#7F8588] font-medium"
+              style={{
+                width: timeUnitWidth,
+                minWidth: timeUnitWidth,
+              }}
             >
               {time}
             </div>
@@ -72,19 +73,25 @@ const GanttChart: React.FC<GanttChartProps> = ({ processes, cpuId }) => {
 
         {/* Chart container with grid */}
         <div
-          className="relative h-10 bg-[#1A1D1F]"
-          style={{ minWidth: timeScale.length * timeUnitWidth * stepSize }}
+          className="relative h-12 bg-[#1A1D1F] rounded"
+          style={{
+            width: containerWidth,
+            minWidth: containerWidth,
+          }}
         >
           {/* Process blocks */}
           {processes.map((process) => (
             <div
               key={process.id}
-              className="absolute h-full rounded-md flex items-center justify-center text-xs text-black font-medium"
+              className="absolute h-full rounded-md flex items-center justify-center text-xs text-black font-medium transition-all duration-200 hover:brightness-110"
               style={{
-                left: `${(process.startTime / totalDuration) * 100}%`,
-                width: `${(process.duration / totalDuration) * 100}%`,
-                minWidth: process.duration * timeUnitWidth,
+                left: process.startTime * timeUnitWidth,
+                width: process.duration * timeUnitWidth,
                 backgroundColor: process.color,
+                minWidth: Math.max(
+                  timeUnitWidth,
+                  process.duration * timeUnitWidth
+                ),
               }}
             >
               {process.name}
