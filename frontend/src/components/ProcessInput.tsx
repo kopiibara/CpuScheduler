@@ -29,6 +29,7 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
   const [abortController, setAbortController] =
     useState<AbortController | null>(null);
   const [quantumTime, setQuantumTime] = useState("2"); // Default quantum time for RR
+  const [isPreemptive, setIsPreemptive] = useState(false); // State for preemptive mode
 
   const { sortedProcesses, sortState, toggleSort, resetSort } = useProcessSorting(processes);
 
@@ -123,7 +124,8 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
         formattedProcesses,
         selectedAlgorithm,
         selectedAlgorithm === "rr" ? parseInt(quantumTime) : undefined,
-        controller.signal
+        controller.signal,
+        selectedAlgorithm === "priority" ? isPreemptive : undefined
       );
 
       console.log("Received result from backend:", result);
@@ -411,6 +413,35 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
                 className="bg-[#242A2D] text-white p-1 rounded-[8px] w-[60px] outline-none border-2 border-transparent hover:border-[#60E2AE] focus:border-[#60E2AE] transition-colors duration-200"
                 min="1"
               />
+            </div>
+          )}
+          {selectedAlgorithm === "priority" && (
+            <div className="flex items-center gap-2">
+              <label className="text-[#FBFCFA] text-[13px] font-medium">
+                Scheduling Mode:
+              </label>
+              <div className="flex items-center gap-3 bg-[#242A2D] px-3 py-1.5 rounded-xl">
+                <span 
+                  onClick={() => setIsPreemptive(false)}
+                  className={`text-[13px] font-medium px-2 py-1 rounded-lg cursor-pointer transition-all duration-300 ${
+                    !isPreemptive 
+                      ? "bg-[#60E2AE] text-[#242A2D] shadow-sm" 
+                      : "text-[#7F8588] hover:text-[#FBFCFA]"
+                  }`}
+                >
+                  Non-Preemptive
+                </span>
+                <span 
+                  onClick={() => setIsPreemptive(true)}
+                  className={`text-[13px] font-medium px-2 py-1 rounded-lg cursor-pointer transition-all duration-300 ${
+                    isPreemptive 
+                      ? "bg-[#60E2AE] text-[#242A2D] shadow-sm" 
+                      : "text-[#7F8588] hover:text-[#FBFCFA]"
+                  }`}
+                >
+                  Preemptive
+                </span>
+              </div>
             </div>
           )}
           {isSimulating && (

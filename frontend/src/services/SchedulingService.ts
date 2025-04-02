@@ -45,7 +45,8 @@ class SchedulingService {
     processes: Process[],
     algorithm: string,
     timeQuantum?: number,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    preemptive?: boolean
   ): Promise<SimulationResult> {
     try {
       const response = await fetch(
@@ -59,6 +60,7 @@ class SchedulingService {
             processes,
             algorithm,
             timeQuantum,
+            preemptive
           }),
           signal,
         }
