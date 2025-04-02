@@ -2,6 +2,7 @@ import { Stack, Box, LinearProgress } from "@mui/material";
 import { useEffect } from "react";
 import { useSystemInfoFetch } from "../../hooks/useSystemInfoFetch";
 import WindowButtons from "../../components/WindowButtons";
+import cpuSchedulerIcon from "../../assets/cpuScheduler-icon.svg";
 
 const WelcomePage = () => {
   const { fetchProgress, fetchSystemInfo } = useSystemInfoFetch(3000); // 3 seconds minimum loading time
@@ -10,6 +11,10 @@ const WelcomePage = () => {
   useEffect(() => {
     fetchSystemInfo();
   }, [fetchSystemInfo]);
+
+  useEffect(() => {
+    console.log("Welcome Page");
+  }, []);
 
   return (
     <Box
@@ -46,7 +51,7 @@ const WelcomePage = () => {
           sx={{ mb: 2 }}
         >
           <img
-            src="/cpuScheduler-icon.svg"
+            src={cpuSchedulerIcon}
             alt="CPU Scheduler"
             style={{ width: "48px", height: "auto" }}
           />

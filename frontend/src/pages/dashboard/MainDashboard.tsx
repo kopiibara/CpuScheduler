@@ -5,6 +5,7 @@ import ProcessGraph from "../../components/ProcessGraph";
 import { useState } from "react";
 import "../../style/custom-scrollbar.css"; // Import global styles
 import { SimulationResult } from "../../types/SimulationObject";
+import { useEffect } from "react";
 
 const MainDashboard = () => {
   const [selectedAlgorithm, setSelectedAlgorithm] = useState("fcfs");
@@ -14,6 +15,10 @@ const MainDashboard = () => {
   const handleSimulationResult = (result: SimulationResult) => {
     setSimulationResult(result);
   };
+
+  useEffect(() => {
+    console.log("Dashboard Page");
+  }, []);
 
   return (
     <Box

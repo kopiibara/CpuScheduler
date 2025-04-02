@@ -4,6 +4,9 @@ import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import CloseIcon from "@mui/icons-material/CloseRounded";
 import { schedulingService } from "../services/SchedulingService";
 import ShuffleIcon from "@mui/icons-material/ShuffleRounded";
+import TrashIcon from "../assets/trash.svg";
+import ArrowRight from "../assets/arrow-right.svg";
+import ArrowRightLight from "../assets/arrow-right-light.svg";
 import "../style/custom-scrollbar.css";
 
 // Use unique IDs that don't change when reindexing
@@ -248,7 +251,7 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
                   onClick={removeAllProcesses}
                   className="rounded-[8px] p-2 h-fit w-fit cursor-pointer text-[#E26062] flex items-center justify-center hover:bg-[#1E1619] hover:scale-105 transition-all duration-200 ease-in"
                 >
-                  <img src="/trash.svg" alt="" className="w-5" />
+                  <img src={TrashIcon} alt="" className="w-5" />
                 </button>
               </Tooltip>
             )}
@@ -328,12 +331,12 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
         >
           {isSimulating ? "SIMULATING..." : "START SIMULATION"}
           <img
-            src="/arrow-right.svg"
+            src={ArrowRight}
             alt="arrow"
             className="w-4 h-auto block group-hover:hidden transition-all duration-200"
           />
           <img
-            src="/arrow-right-light.svg"
+            src={ArrowRightLight}
             alt="arrow"
             className="w-4 h-auto hidden group-hover:block transition-all duration-200"
           />

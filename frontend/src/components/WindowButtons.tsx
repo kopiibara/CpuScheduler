@@ -88,21 +88,21 @@ const WindowButtons = () => {
     >
       <button
         onClick={handleMinimize}
-        className="control-button w-10 h-8 flex justify-center items-center rounded-[6px] hover:bg-[#60E2AE]"
+        className="control-button w-10 h-8 flex cursor-pointer justify-center items-center rounded-[6px] hover:bg-[#60E2AE]"
         aria-label="Minimize"
       >
         <MinimizeIcon />
       </button>
       <button
         onClick={handleMaximize}
-        className="control-button w-10 h-8 flex justify-center items-center rounded-[6px] hover:bg-[#60E2AE]"
+        className="control-button w-10 h-8 flex cursor-pointer justify-center items-center rounded-[6px] hover:bg-[#60E2AE]"
         aria-label={isMaximized ? "Restore" : "Maximize"}
       >
         {isMaximized ? <RestoreIcon /> : <MaximizeIcon />}
       </button>
       <button
         onClick={handleClose}
-        className="control-button w-10 h-8 flex justify-center items-center rounded-[6px] hover:bg-red-600"
+        className="control-button w-10 h-8 flex cursor-pointer justify-center items-center rounded-[6px] hover:bg-red-600"
         aria-label="Close"
       >
         <CloseIcon />

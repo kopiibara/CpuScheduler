@@ -4,6 +4,7 @@ import InfoIcon from "@mui/icons-material/Info";
 import WindowButtons from "./WindowButtons";
 import SystemInfoModal from "./SystemInfoModal";
 import { useSystemInfoFetch } from "../hooks/useSystemInfoFetch";
+import cpuSchedulerIcon from "../assets/cpuScheduler-icon.svg";
 
 const Header = () => {
   const [modalOpen, setModalOpen] = useState(false);
@@ -20,7 +21,7 @@ const Header = () => {
         <Stack direction="row" spacing={2} className="w-full">
           <Box className="flex w-full px-10 py-5 items-center">
             <img
-              src="/cpuScheduler-icon.svg"
+              src={cpuSchedulerIcon}
               alt="CPU Scheduler"
               className="w-[26px] h-auto mr-3"
             />

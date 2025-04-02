@@ -105,17 +105,17 @@ const ProcessGraph: React.FC<ProcessGraphProps> = ({
             <Stack direction="row" spacing={1}>
               <button
                 onClick={() => setViewMode("chart")}
-                className={`p-1 rounded ${
+                className={`p-1 rounded-[8px] cursor-pointer transition-all duration-200 ease-in ${
                   viewMode === "chart"
                     ? "bg-[#242A2D] text-[#FBFCFA]"
                     : "text-[#7F8588] hover:text-[#FBFCFA]"
                 }`}
               >
-                <BarChartIcon />
+                <TimelineIcon />
               </button>
               <button
                 onClick={() => setViewMode("table")}
-                className={`p-1 rounded ${
+                className={`p-1 rounded-[8px] cursor-pointer transition-all duration-200 ease-in ${
                   viewMode === "table"
                     ? "bg-[#242A2D] text-[#FBFCFA]"
                     : "text-[#7F8588] hover:text-[#FBFCFA]"
@@ -258,17 +258,17 @@ const ProcessGraph: React.FC<ProcessGraphProps> = ({
           <Stack direction="row" spacing={1}>
             <button
               onClick={() => setGanttViewMode("chart")}
-              className={`p-1 rounded ${
+              className={`p-1 rounded-[8px] cursor-pointer transition-all duration-200 ease-in ${
                 ganttViewMode === "chart"
                   ? "bg-[#242A2D] text-[#FBFCFA]"
                   : "text-[#7F8588] hover:text-[#FBFCFA]"
               }`}
             >
-              <TimelineIcon />
+              <BarChartIcon />
             </button>
             <button
               onClick={() => setGanttViewMode("table")}
-              className={`p-1 rounded ${
+              className={`p-1 rounded-[8px] cursor-pointer transition-all duration-200 ease-in ${
                 ganttViewMode === "table"
                   ? "bg-[#242A2D] text-[#FBFCFA]"
                   : "text-[#7F8588] hover:text-[#FBFCFA]"

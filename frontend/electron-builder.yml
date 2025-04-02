@@ -1,0 +1,17 @@
+appId: com.cpuscheduler.app
+productName: CPU Scheduler
+copyright: "© 2025 CPU Scheduler"
+directories:
+  output: dist
+files:
+  - "**/*"
+  - "backend_server.exe"
+win:
+  target: nsis
+  icon: public/cpuScheduler-icon.ico
+  artifactName: "cpuscheduler-v1.0.0.exe"
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: true

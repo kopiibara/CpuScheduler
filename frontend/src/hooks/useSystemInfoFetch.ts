@@ -97,7 +97,7 @@ export const useSystemInfoFetch = (minimumLoadingTime = 3000) => {
       if (progressInterval) clearInterval(progressInterval);
 
       errorInterval = setInterval(() => {
-        setFetchProgress((prev) => {
+        setFetchProgress(() => {
           const timeNow = Date.now();
           const totalElapsed = timeNow - fetchStartTimeRef.current;
           if (totalElapsed >= minimumLoadingTime) {
