@@ -3,7 +3,7 @@ from .BaseSchedulingService import BaseSchedulingService
 
 class RoundRobinService(BaseSchedulingService):
     def schedule(self, processes: List[Dict[str, Any]], time_quantum: int) -> Dict[str, Any]:
-        """Round Robin scheduling algorithm with multi-core support"""
+        """Round Robin scheduling algorithm with multi-core support and global queue"""
         # Create a copy of processes and add remaining_time field
         processes_copy = [p.copy() for p in processes]
         for p in processes_copy:
@@ -12,10 +12,20 @@ class RoundRobinService(BaseSchedulingService):
         # Sort by arrival time
         processes_copy.sort(key=lambda p: p['arrival_time'])
         
-        # Initialize timelines and ready queues for each core
+        # Initialize timelines for each core
         timelines = {str(i): {"processes": []} for i in range(self.cpu_cores)}
-        core_times = {str(i): 0 for i in range(self.cpu_cores)}
-        ready_queues = {str(i): [] for i in range(self.cpu_cores)}
+        
+        # Initialize a global queue
+        global_queue = []
+        
+        # Track CPU availability and current time for each CPU
+        cpu_availability = {str(i): 0 for i in range(self.cpu_cores)}  # Time when CPU becomes available
+        
+        # Track currently executing processes on each CPU
+        currently_executing = {str(i): None for i in range(self.cpu_cores)}
+        
+        # Set of process IDs that are currently executing
+        executing_process_ids = set()
         
         # Keep track of original processes data
         original_processes = {p['id']: p.copy() for p in processes}
@@ -23,62 +33,97 @@ class RoundRobinService(BaseSchedulingService):
         # Track which processes are completed
         completed_processes = set()
         
-        # Keep processing until all processes are completed
+        # Keep track of processes yet to arrive
         remaining_processes = processes_copy.copy()
         
+        # Global time tracker
+        current_time = 0
+        
         while len(completed_processes) < len(processes):
-            # For each core
-            for core_id in range(self.cpu_cores):
-                core_id_str = str(core_id)
-                current_time = core_times[core_id_str]
+            # Add newly arrived processes to the global queue
+            while remaining_processes and remaining_processes[0]['arrival_time'] <= current_time:
+                process = remaining_processes.pop(0)
+                global_queue.append(process)
+            
+            # If no processes in queue and no remaining processes, we're done
+            if not global_queue and not remaining_processes:
+                break
+            
+            # If no processes in queue but we have remaining processes, advance time
+            if not global_queue and remaining_processes:
+                current_time = remaining_processes[0]['arrival_time']
+                continue
+            
+            # Check CPUs that have finished processing
+            for cpu_id in currently_executing.keys():
+                if currently_executing[cpu_id] is not None and cpu_availability[cpu_id] <= current_time:
+                    completed_process = currently_executing[cpu_id]
+                    # If process is not done, add it back to queue
+                    if completed_process['remaining_time'] > 0:
+                        global_queue.append(completed_process)
+                    else:
+                        # Mark as completed
+                        completed_processes.add(completed_process['id'])
+                    
+                    # Remove from executing list
+                    executing_process_ids.remove(completed_process['id'])
+                    currently_executing[cpu_id] = None
+            
+            # Find available CPUs
+            available_cpus = [cpu_id for cpu_id, process in currently_executing.items() 
+                             if process is None]
+            
+            # If no CPUs available, advance time to the next CPU availability
+            if not available_cpus:
+                next_available_time = min(cpu_availability[cpu_id] for cpu_id, process 
+                                        in currently_executing.items() 
+                                        if process is not None)
+                current_time = next_available_time
+                continue
+            
+            # Assign processes to available CPUs
+            for cpu_id in available_cpus:
+                # Find processes in queue that aren't currently executing
+                available_processes = [p for p in global_queue if p['id'] not in executing_process_ids]
                 
-                # Add newly arrived processes to this core's queue
-                arrived = [p for p in remaining_processes if p['arrival_time'] <= current_time and 
-                          p['id'] not in completed_processes]
+                if not available_processes:
+                    break
                 
-                for p in arrived:
-                    if p in remaining_processes:
-                        remaining_processes.remove(p)
-                        ready_queues[core_id_str].append(p)
+                # Get next non-executing process from queue
+                process_index = next((i for i, p in enumerate(global_queue) 
+                                    if p['id'] not in executing_process_ids), None)
                 
-                # If no processes in ready queue, advance time to next arrival
-                if not ready_queues[core_id_str]:
-                    if remaining_processes:
-                        # Move to next arrival time
-                        next_arrival = min(p['arrival_time'] for p in remaining_processes)
-                        core_times[core_id_str] = max(core_times[core_id_str], next_arrival)
-                    continue
-                
-                # Get the next process from this core's queue
-                process = ready_queues[core_id_str].pop(0)
+                if process_index is None:
+                    break
+                    
+                process = global_queue.pop(process_index)
                 
                 # Calculate execution time for this turn
                 execution_time = min(time_quantum, process['remaining_time'])
                 
                 # Add to timeline
-                timelines[core_id_str]["processes"].append({
+                timelines[cpu_id]["processes"].append({
                     "id": process["id"],
                     "start_time": current_time,
                     "end_time": current_time + execution_time
                 })
                 
-                # Update current time and remaining time
-                current_time += execution_time
+                # Update CPU availability and currently executing
+                cpu_availability[cpu_id] = current_time + execution_time
+                currently_executing[cpu_id] = process
+                executing_process_ids.add(process['id'])
+                
+                # Update remaining time for process
                 process['remaining_time'] -= execution_time
-                core_times[core_id_str] = current_time
-                
-                # Check if process is completed
-                if process['remaining_time'] > 0:
-                    # Put back in queue if not finished, after newly arrived processes
-                    ready_queues[core_id_str].append(process)
-                else:
-                    # Mark as completed
-                    completed_processes.add(process['id'])
             
-            # If all processes are complete, exit loop
-            if len(completed_processes) == len(processes):
-                break
-                
+            # Advance time to the next event (CPU availability or new process arrival)
+            next_cpu_time = min([cpu_availability[cpu_id] for cpu_id, process 
+                               in currently_executing.items() 
+                               if process is not None], default=float('inf'))
+            
+            next_arrival_time = remaining_processes[0]['arrival_time'] if remaining_processes else float('inf')
+            current_time = min(next_cpu_time, next_arrival_time)
+        
         # Calculate metrics for each process
         process_results = []
         for core_id, timeline in timelines.items():

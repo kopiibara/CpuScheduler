@@ -24,9 +24,9 @@ class SchedulingService:
         """Shortest Job First scheduling with multi-core support"""
         return self.sjf_service.schedule(processes)
     
-    def priority(self, processes: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def priority(self, processes: List[Dict[str, Any]], preemptive: bool = False) -> Dict[str, Any]:
         """Priority scheduling algorithm with multi-core support"""
-        return self.priority_service.schedule(processes)
+        return self.priority_service.schedule(processes, preemptive)
     
     def round_robin(self, processes: List[Dict[str, Any]], time_quantum: int) -> Dict[str, Any]:
         """Round Robin scheduling algorithm with multi-core support"""

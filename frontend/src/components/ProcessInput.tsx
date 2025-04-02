@@ -5,6 +5,9 @@ import CloseIcon from "@mui/icons-material/CloseRounded";
 import { schedulingService } from "../services/SchedulingService";
 import ShuffleIcon from "@mui/icons-material/ShuffleRounded";
 import "../style/custom-scrollbar.css";
+import { useProcessSorting } from "../hooks/useProcessSorting";
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 
 // Use unique IDs that don't change when reindexing
 let nextId = 2; // Start with 2 since we already have process 1
@@ -25,6 +28,10 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [abortController, setAbortController] =
     useState<AbortController | null>(null);
+  const [quantumTime, setQuantumTime] = useState("2"); // Default quantum time for RR
+  const [isPreemptive, setIsPreemptive] = useState(false); // State for preemptive mode
+
+  const { sortedProcesses, sortState, toggleSort, resetSort } = useProcessSorting(processes);
 
   const addProcess = () => {
     const newId = nextId++;
@@ -86,6 +93,15 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
         return;
       }
 
+      // Validate quantum time for Round Robin
+      if (selectedAlgorithm === "rr") {
+        const quantum = parseInt(quantumTime);
+        if (isNaN(quantum) || quantum <= 0) {
+          setErrorMessage("Quantum time must be a positive number");
+          return;
+        }
+      }
+
       // Create new AbortController for this simulation
       const controller = new AbortController();
       setAbortController(controller);
@@ -103,12 +119,13 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
       console.log("Sending processes to backend:", formattedProcesses);
       console.log("Selected algorithm:", selectedAlgorithm);
 
-      // Call backend API with abort signal
+      // Call backend API with abort signal and dynamic quantum time
       const result = await schedulingService.simulateScheduling(
         formattedProcesses,
         selectedAlgorithm,
-        selectedAlgorithm === "rr" ? 2 : undefined,
-        controller.signal
+        selectedAlgorithm === "rr" ? parseInt(quantumTime) : undefined,
+        controller.signal,
+        selectedAlgorithm === "priority" ? isPreemptive : undefined
       );
 
       console.log("Received result from backend:", result);
@@ -164,6 +181,35 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
       console.error("Error generating random processes", error);
     }
   };
+
+  const SortableColumnHeader = ({ field, label }: { field: 'arrival' | 'burst' | 'priority', label: string }) => (
+    <div 
+      className="text-[#FBFCFA] text-[13px] cursor-pointer hover:text-[#60E2AE] transition-colors duration-200 flex items-center gap-1"
+      onClick={() => toggleSort(field)}
+    >
+      {label}
+      {sortState.field === field && (
+        sortState.direction === 'asc' ? 
+          <ArrowUpwardIcon fontSize="small" /> : 
+          <ArrowDownwardIcon fontSize="small" />
+      )}
+    </div>
+  );
+
+  const ProcessIdHeader = () => (
+    <div 
+      className="text-[#FBFCFA] text-[13px] cursor-pointer hover:text-[#60E2AE] transition-colors duration-200 flex items-center gap-1"
+      onClick={resetSort}
+    >
+      {sortState.field ? (
+        <Tooltip title="Click to reset sorting" arrow placement="bottom">
+          <span>PROCESS ID</span>
+        </Tooltip>
+      ) : (
+        "PROCESS ID"
+      )}
+    </div>
+  );
 
   return (
     <Stack
@@ -251,10 +297,10 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
             gap: "10px",
           }}
         >
-          <div className="text-[#FBFCFA] text-[13px]">PROCESS ID</div>
-          <div className="text-[#FBFCFA] text-[13px]">ARRIVAL TIME</div>
-          <div className="text-[#FBFCFA] text-[13px]">BURST TIME</div>
-          <div className="text-[#FBFCFA] text-[13px]">PRIORITY</div>
+          <ProcessIdHeader />
+          <SortableColumnHeader field="arrival" label="ARRIVAL TIME" />
+          <SortableColumnHeader field="burst" label="BURST TIME" />
+          <SortableColumnHeader field="priority" label="PRIORITY" />
           <div className="text-[#FBFCFA] text-[13px]">
             {processes.length > 2 && (
               <Tooltip
@@ -292,7 +338,7 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
           className="overflow-y-auto custom-scrollbar overflow-x-hidden"
           style={{ maxHeight: "100%" }}
         >
-          {processes.map((process) => (
+          {sortedProcesses.map((process) => (
             <div
               key={process.id}
               className="grid items-center w-full mb-3"
@@ -353,7 +399,51 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
       <footer className="flex items-end">
         {/* Button to start simulation */}
         <Box flex={1} /> {/* Spacer to push button to the bottom */}
-        <Stack direction="row" spacing={2}>
+        <Stack direction="row" spacing={2} alignItems="center">
+          {selectedAlgorithm === "rr" && (
+            <div className="flex items-center gap-2">
+              <label htmlFor="quantum-time" className="text-[#FBFCFA] text-[13px]">
+                Quantum Time:
+              </label>
+              <input
+                id="quantum-time"
+                type="number"
+                value={quantumTime}
+                onChange={(e) => setQuantumTime(e.target.value)}
+                className="bg-[#242A2D] text-white p-1 rounded-[8px] w-[60px] outline-none border-2 border-transparent hover:border-[#60E2AE] focus:border-[#60E2AE] transition-colors duration-200"
+                min="1"
+              />
+            </div>
+          )}
+          {selectedAlgorithm === "priority" && (
+            <div className="flex items-center gap-2">
+              <label className="text-[#FBFCFA] text-[13px] font-medium">
+                Scheduling Mode:
+              </label>
+              <div className="flex items-center gap-3 bg-[#242A2D] px-3 py-1.5 rounded-xl">
+                <span 
+                  onClick={() => setIsPreemptive(false)}
+                  className={`text-[13px] font-medium px-2 py-1 rounded-lg cursor-pointer transition-all duration-300 ${
+                    !isPreemptive 
+                      ? "bg-[#60E2AE] text-[#242A2D] shadow-sm" 
+                      : "text-[#7F8588] hover:text-[#FBFCFA]"
+                  }`}
+                >
+                  Non-Preemptive
+                </span>
+                <span 
+                  onClick={() => setIsPreemptive(true)}
+                  className={`text-[13px] font-medium px-2 py-1 rounded-lg cursor-pointer transition-all duration-300 ${
+                    isPreemptive 
+                      ? "bg-[#60E2AE] text-[#242A2D] shadow-sm" 
+                      : "text-[#7F8588] hover:text-[#FBFCFA]"
+                  }`}
+                >
+                  Preemptive
+                </span>
+              </div>
+            </div>
+          )}
           {isSimulating && (
             <button
               onClick={stopSimulation}

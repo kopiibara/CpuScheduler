@@ -22,6 +22,7 @@ class SchedulingController:
             processes = data.get('processes', [])
             algorithm = data.get('algorithm')
             time_quantum = data.get('timeQuantum')
+            preemptive = data.get('preemptive', False)
 
             if not processes or not isinstance(processes, list):
                 print("Invalid processes data:", processes)  # Debug log
@@ -48,7 +49,7 @@ class SchedulingController:
             elif algorithm == "srtf":
                 result = self.scheduling_service.srtf(processes)
             elif algorithm == "priority":
-                result = self.scheduling_service.priority(processes)
+                result = self.scheduling_service.priority(processes, preemptive)
             elif algorithm == "rr":
                 if not time_quantum:
                     print("Time quantum not specified for Round Robin")  # Debug log

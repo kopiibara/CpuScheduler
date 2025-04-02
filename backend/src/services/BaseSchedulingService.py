@@ -3,8 +3,8 @@ import psutil
 
 class BaseSchedulingService:
     def __init__(self):
-        # Get the actual number of CPU cores from the system
-        self.cpu_cores = max(1, psutil.cpu_count(logical=False) or 1)
+        # Set a fixed number of CPU cores (4) for consistent visualization
+        self.cpu_cores = 4
     
     def _calculate_metrics(self, processes, timeline, cpu_core=0):
         """Calculate waiting time, turnaround time, etc. for each process"""
