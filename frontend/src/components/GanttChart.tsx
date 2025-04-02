@@ -18,10 +18,32 @@ const GanttChart: React.FC<GanttChartProps> = ({ processes, cpuId }) => {
     (acc, curr) => Math.max(acc, curr.startTime + curr.duration),
     0
   );
-  const timeScale = Array.from({ length: totalDuration + 1 }, (_, i) => i);
 
-  // Ensure each time unit has a minimum width
-  const timeUnitWidth = 24; // Pixels per time unit
+  // Calculate the step size based on total duration
+  const getStepSize = (duration: number) => {
+    if (duration <= 10) return 1;
+    if (duration <= 50) return 5;
+    if (duration <= 100) return 10;
+    if (duration <= 500) return 50;
+    return 100;
+  };
+
+  const stepSize = getStepSize(totalDuration);
+  const timeScale = Array.from(
+    { length: Math.ceil((totalDuration + 1) / stepSize) },
+    (_, i) => i * stepSize
+  );
+
+  // Adjust time unit width based on total duration
+  const getTimeUnitWidth = (duration: number) => {
+    if (duration <= 10) return 24;
+    if (duration <= 50) return 20;
+    if (duration <= 100) return 16;
+    if (duration <= 500) return 12;
+    return 8;
+  };
+
+  const timeUnitWidth = getTimeUnitWidth(totalDuration);
 
   return (
     <div className="flex items-center gap-4">
@@ -31,17 +53,17 @@ const GanttChart: React.FC<GanttChartProps> = ({ processes, cpuId }) => {
       </div>
 
       {/* Gantt Chart */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative overflow-x-auto">
         {/* Time markers */}
         <div
           className="flex mb-2"
-          style={{ minWidth: timeScale.length * timeUnitWidth }}
+          style={{ minWidth: timeScale.length * timeUnitWidth * stepSize }}
         >
           {timeScale.map((time) => (
             <div
               key={time}
-              className="flex-1 text-center text-[10px] text-[#7F8588]"
-              style={{ minWidth: timeUnitWidth }}
+              className="text-center text-[10px] text-[#7F8588]"
+              style={{ width: timeUnitWidth * stepSize }}
             >
               {time}
             </div>
@@ -51,7 +73,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ processes, cpuId }) => {
         {/* Chart container with grid */}
         <div
           className="relative h-10 bg-[#1A1D1F]"
-          style={{ minWidth: timeScale.length * timeUnitWidth }}
+          style={{ minWidth: timeScale.length * timeUnitWidth * stepSize }}
         >
           {/* Process blocks */}
           {processes.map((process) => (

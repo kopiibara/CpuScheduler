@@ -203,7 +203,7 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
                 onClick={addProcess}
                 className="bg-white w-8 h-8 rounded-lg font-semibold hover:bg-[#60E2AE] transition-all duration-200 flex items-center justify-center cursor-pointer"
               >
-                <AddRoundedIcon fontSize="small" />
+                <AddRoundedIcon fontSize="medium" />
               </button>
             </Tooltip>
           </Stack>
