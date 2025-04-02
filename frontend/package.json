@@ -2,7 +2,7 @@
   "name": "cpuscheduler",
   "productName": "CpuScheduler",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "A CPU scheduler simulator application.",
   "author": "duel-learn@devs",
@@ -62,7 +62,7 @@
     },
     "win": {
       "icon": "public/cpuScheduler-icon.ico",
-      "artifactName": "CPUSCHEDULER-${version}.exe"
+      "artifactName": "CpuScheduler-${version}.exe"
     },
     "nsis": {
       "oneClick": false,

@@ -1,60 +1,93 @@
-import { app as a, BrowserWindow as p, Menu as u, ipcMain as l } from "electron";
-import { fileURLToPath as w } from "node:url";
-import o from "node:path";
-import { spawn as g } from "child_process";
-import b from "node:http";
-const x = o.dirname(w(import.meta.url));
-process.env.APP_ROOT = o.join(x, "..");
-const c = process.env.VITE_DEV_SERVER_URL, z = o.join(process.env.APP_ROOT, "dist-electron"), f = o.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = c ? o.join(process.env.APP_ROOT, "public") : f;
-let e, n = null, r = !1;
-a.whenReady().then(() => {
-  k();
+import { app, BrowserWindow, Menu, ipcMain } from "electron";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+import { spawn } from "child_process";
+import http from "node:http";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+process.env.APP_ROOT = path.join(__dirname, "..");
+const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
+const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
+const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
+let win;
+let backendProcess = null;
+let windowCreated = false;
+app.whenReady().then(() => {
+  startBackendAndCreateWindow();
 });
-function k() {
-  const i = o.join(
-    a.getAppPath(),
+function startBackendAndCreateWindow() {
+  const backendPath = path.join(
+    app.getAppPath(),
     "public",
     "backend_server.exe"
   );
-  console.log(`Starting backend at: ${i}`);
+  console.log(`Starting backend at: ${backendPath}`);
   try {
-    n = g(i, [], {
-      detached: !1,
+    backendProcess = spawn(backendPath, [], {
+      detached: false,
       stdio: "pipe",
-      windowsHide: !0
-    }), n && n.stdout && n.stdout.on("data", (t) => {
-      console.log(`Backend stdout: ${t.toString().trim()}`);
-    }), n && n.stderr && n.stderr.on("data", (t) => {
-      console.error(`Backend stderr: ${t.toString().trim()}`);
-    }), n && n.on("error", (t) => {
-      console.error(`Failed to start backend: ${t.message}`), r || d(!1);
-    }), m(0);
-  } catch (t) {
+      windowsHide: true
+    });
+    if (backendProcess && backendProcess.stdout) {
+      backendProcess.stdout.on("data", (data) => {
+        console.log(`Backend stdout: ${data.toString().trim()}`);
+      });
+    }
+    if (backendProcess && backendProcess.stderr) {
+      backendProcess.stderr.on("data", (data) => {
+        console.error(`Backend stderr: ${data.toString().trim()}`);
+      });
+    }
+    if (backendProcess) {
+      backendProcess.on("error", (err) => {
+        console.error(`Failed to start backend: ${err.message}`);
+        if (!windowCreated) {
+          createWindow(false);
+        }
+      });
+    }
+    checkBackendHealth(0);
+  } catch (error) {
     console.error(
-      `Exception starting backend: ${t instanceof Error ? t.message : String(t)}`
-    ), r || d(!1);
+      `Exception starting backend: ${error instanceof Error ? error.message : String(error)}`
+    );
+    if (!windowCreated) {
+      createWindow(false);
+    }
   }
 }
-function m(i) {
-  let s = 100;
-  if (i >= 30) {
-    console.error("Backend health check failed after 30 attempts"), r || d(!1);
+function checkBackendHealth(attempts) {
+  const maxAttempts = 30;
+  const initialDelay = 100;
+  let currentDelay = initialDelay;
+  if (attempts >= maxAttempts) {
+    console.error(`Backend health check failed after ${maxAttempts} attempts`);
+    if (!windowCreated) {
+      createWindow(false);
+    }
     return;
   }
-  b.get("http://127.0.0.1:8000/health", (h) => {
-    h.statusCode === 200 ? (console.log("Backend is healthy, creating window"), d(!0)) : (s = Math.min(s * 1.5, 2e3), setTimeout(() => m(i + 1), s));
+  http.get("http://127.0.0.1:8000/health", (res) => {
+    if (res.statusCode === 200) {
+      console.log("Backend is healthy, creating window");
+      createWindow(true);
+    } else {
+      currentDelay = Math.min(currentDelay * 1.5, 2e3);
+      setTimeout(() => checkBackendHealth(attempts + 1), currentDelay);
+    }
   }).on("error", () => {
-    s = Math.min(s * 1.5, 2e3), setTimeout(() => m(i + 1), s);
+    currentDelay = Math.min(currentDelay * 1.5, 2e3);
+    setTimeout(() => checkBackendHealth(attempts + 1), currentDelay);
   });
 }
-function d(i = !1) {
-  if (r) {
+function createWindow(backendReady = false) {
+  if (windowCreated) {
     console.log("Window already created, skipping");
     return;
   }
-  if (r = !0, e = new p({
-    icon: o.join(a.getAppPath(), "public", "cpuScheduler-icon.ico"),
+  windowCreated = true;
+  win = new BrowserWindow({
+    icon: path.join(app.getAppPath(), "public", "cpuScheduler-icon.ico"),
     title: "CpuScheduler",
     // Set window title
     width: 1400,
@@ -64,50 +97,78 @@ function d(i = !1) {
     // Minimum width of the window
     minHeight: 800,
     // Minimum height of the window
-    resizable: !1,
+    resizable: false,
     // Allow window resizing
-    frame: !1,
+    frame: false,
     // Remove default window frame
     webPreferences: {
-      preload: o.join(a.getAppPath(), "dist-electron", "preload.mjs"),
-      nodeIntegration: !1,
-      contextIsolation: !0
+      preload: path.join(app.getAppPath(), "dist-electron", "preload.mjs"),
+      nodeIntegration: false,
+      contextIsolation: true
     }
-  }), e.center(), e.webContents.openDevTools(), u.setApplicationMenu(null), e.on("maximize", () => {
-    e == null || e.webContents.send("window-state-changed", { isMaximized: !0 });
-  }), e.on("unmaximize", () => {
-    e == null || e.webContents.send("window-state-changed", { isMaximized: !1 });
-  }), e.webContents.on("did-finish-load", () => {
-    e == null || e.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString()), e == null || e.webContents.send("backend-ready", i);
-  }), c)
-    e.loadURL(c);
-  else {
-    const t = o.join(f, "index.html");
-    e.loadFile(t), e.webContents.on("did-start-loading", () => {
-      e == null || e.webContents.executeJavaScript(`
+  });
+  win.center();
+  win.webContents.openDevTools();
+  Menu.setApplicationMenu(null);
+  win.on("maximize", () => {
+    win == null ? void 0 : win.webContents.send("window-state-changed", { isMaximized: true });
+  });
+  win.on("unmaximize", () => {
+    win == null ? void 0 : win.webContents.send("window-state-changed", { isMaximized: false });
+  });
+  win.webContents.on("did-finish-load", () => {
+    win == null ? void 0 : win.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
+    win == null ? void 0 : win.webContents.send("backend-ready", backendReady);
+  });
+  if (VITE_DEV_SERVER_URL) {
+    win.loadURL(VITE_DEV_SERVER_URL);
+  } else {
+    const indexPath = path.join(RENDERER_DIST, "index.html");
+    win.loadFile(indexPath);
+    win.webContents.on("did-start-loading", () => {
+      win == null ? void 0 : win.webContents.executeJavaScript(`
         window.BASE_URL = './';
       `);
     });
   }
 }
-l.on("window-minimize", () => {
-  e && e.minimize();
+ipcMain.on("window-minimize", () => {
+  if (win) win.minimize();
 });
-l.on("window-maximize", () => {
-  e && (e.isMaximized() ? e.unmaximize() : e.maximize());
+ipcMain.on("window-maximize", () => {
+  if (win) {
+    if (win.isMaximized()) {
+      win.unmaximize();
+    } else {
+      win.maximize();
+    }
+  }
 });
-l.on("window-close", () => {
-  e && e.close();
+ipcMain.on("window-close", () => {
+  if (win) win.close();
 });
-l.handle("window-is-maximized", () => e ? e.isMaximized() : !1);
-a.on("window-all-closed", () => {
-  n && (console.log("Terminating backend process..."), n.kill(), n = null), process.platform !== "darwin" && (a.quit(), e = null);
+ipcMain.handle("window-is-maximized", () => {
+  if (win) return win.isMaximized();
+  return false;
 });
-a.on("activate", () => {
-  p.getAllWindows().length === 0 && d();
+app.on("window-all-closed", () => {
+  if (backendProcess) {
+    console.log("Terminating backend process...");
+    backendProcess.kill();
+    backendProcess = null;
+  }
+  if (process.platform !== "darwin") {
+    app.quit();
+    win = null;
+  }
+});
+app.on("activate", () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
 });
 export {
-  z as MAIN_DIST,
-  f as RENDERER_DIST,
-  c as VITE_DEV_SERVER_URL
+  MAIN_DIST,
+  RENDERER_DIST,
+  VITE_DEV_SERVER_URL
 };

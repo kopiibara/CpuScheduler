@@ -1,1 +1,31 @@
-"use strict";const e=require("electron");e.contextBridge.exposeInMainWorld("ipcRenderer",{on(...n){const[i,r]=n;return e.ipcRenderer.on(i,(o,...d)=>r(o,...d))},off(...n){const[i,...r]=n;return e.ipcRenderer.off(i,...r)},send(...n){const[i,...r]=n;return e.ipcRenderer.send(i,...r)},invoke(...n){const[i,...r]=n;return e.ipcRenderer.invoke(i,...r)}});e.contextBridge.exposeInMainWorld("windowControls",{minimize:()=>e.ipcRenderer.send("window-minimize"),maximize:()=>e.ipcRenderer.send("window-maximize"),close:()=>e.ipcRenderer.send("window-close"),isMaximized:()=>e.ipcRenderer.invoke("window-is-maximized")});
+"use strict";
+const electron = require("electron");
+electron.contextBridge.exposeInMainWorld("ipcRenderer", {
+  on(...args) {
+    const [channel, listener] = args;
+    return electron.ipcRenderer.on(
+      channel,
+      (event, ...args2) => listener(event, ...args2)
+    );
+  },
+  off(...args) {
+    const [channel, ...omit] = args;
+    return electron.ipcRenderer.off(channel, ...omit);
+  },
+  send(...args) {
+    const [channel, ...omit] = args;
+    return electron.ipcRenderer.send(channel, ...omit);
+  },
+  invoke(...args) {
+    const [channel, ...omit] = args;
+    return electron.ipcRenderer.invoke(channel, ...omit);
+  }
+  // You can expose other APTs you need here.
+  // ...
+});
+electron.contextBridge.exposeInMainWorld("windowControls", {
+  minimize: () => electron.ipcRenderer.send("window-minimize"),
+  maximize: () => electron.ipcRenderer.send("window-maximize"),
+  close: () => electron.ipcRenderer.send("window-close"),
+  isMaximized: () => electron.ipcRenderer.invoke("window-is-maximized")
+});
