@@ -1,5 +1,5 @@
 import { Stack, Tooltip, Box } from "@mui/material";
-import { useState } from "react";
+import { useState, forwardRef, useImperativeHandle } from "react";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import CloseIcon from "@mui/icons-material/CloseRounded";
 import { schedulingService } from "../services/SchedulingService";
@@ -17,10 +17,11 @@ interface ProcessInputProps {
   selectedAlgorithm: string;
 }
 
-const ProcessInput: React.FC<ProcessInputProps> = ({
-  onSimulationResult,
-  selectedAlgorithm,
-}) => {
+// Change component definition to use forwardRef
+const ProcessInput = forwardRef<
+  { triggerSimulation: () => void },
+  ProcessInputProps
+>(({ onSimulationResult, selectedAlgorithm }, ref) => {
   const [processes, setProcesses] = useState([
     { id: 1, index: 1, arrival: "0", burst: "0", priority: "0" },
   ]);
@@ -43,6 +44,7 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
     ]);
   };
 
+  // Modified removeProcess function to ensure simulation uses updated process list
   const removeProcess = (id: number) => {
     // Don't remove if it's the last process
     if (processes.length <= 1) {
@@ -52,13 +54,31 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
     // Remove the process with the specific ID
     const filteredProcesses = processes.filter((process) => process.id !== id);
 
-    // Reindex remaining processes to ensure sequential indexes (not IDs)
+    // Reindex remaining processes
     const reindexedProcesses = filteredProcesses.map((process, idx) => ({
       ...process,
-      index: idx + 1, // Update visual index
+      index: idx + 1,
     }));
 
+    // Update state
     setProcesses(reindexedProcesses);
+
+    // Important: Check if we have valid processes to simulate
+    const hasValidProcesses = reindexedProcesses.some(
+      (p) => p.burst && parseInt(p.burst) > 0
+    );
+
+    if (hasValidProcesses && !isSimulating) {
+      console.log(
+        "Triggering simulation after process removal with updated list"
+      );
+      // Directly pass the updated process list to simulate with
+      simulateWithProcesses(reindexedProcesses);
+    } else {
+      // If no valid processes, reset the graphs
+      console.log("No valid processes after removal, resetting graphs");
+      onSimulationResult(null);
+    }
   };
 
   const handleChange = (id: number, field: string, value: string) => {
@@ -69,11 +89,12 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
     );
   };
 
-  const startSimulation = async () => {
+  // New function to simulate with a specific process list
+  const simulateWithProcesses = async (processList: any[]) => {
     try {
       // Validate process values first
-      const invalidProcess = processes.find(
-        (p) => !p.burst || parseInt(p.burst) <= 0
+      const invalidProcess = processList.find(
+        (p: { burst: string }) => !p.burst || parseInt(p.burst) <= 0
       );
 
       if (invalidProcess) {
@@ -88,12 +109,17 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
       setErrorMessage(null);
 
       // Format processes for the backend with sequential IDs
-      const formattedProcesses = processes.map((p, index) => ({
-        id: index + 1, // Reset IDs to be sequential 1, 2, 3...
-        arrival_time: parseInt(p.arrival) || 0,
-        burst_time: parseInt(p.burst) || 0,
-        priority: parseInt(p.priority) || 0,
-      }));
+      const formattedProcesses = processList.map(
+        (
+          p: { arrival: string; burst: string; priority: string },
+          index: number
+        ) => ({
+          id: index + 1, // Reset IDs to be sequential 1, 2, 3...
+          arrival_time: parseInt(p.arrival) || 0,
+          burst_time: parseInt(p.burst) || 0,
+          priority: parseInt(p.priority) || 0,
+        })
+      );
 
       console.log("Sending processes to backend:", formattedProcesses);
       console.log("Selected algorithm:", selectedAlgorithm);
@@ -122,13 +148,21 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
       console.error("Simulation failed:", error);
       setErrorMessage(
         error instanceof Error
-          ? error.message
+          ? `Simulation failed: ${error.message}`
           : "Simulation failed. Please try again."
       );
+
+      // Important: Pass null to reset the simulation display when there's an error
+      onSimulationResult(null);
     } finally {
       setIsSimulating(false);
       setAbortController(null);
     }
+  };
+
+  // Update startSimulation to use the new function
+  const startSimulation = () => {
+    simulateWithProcesses(processes);
   };
 
   const cancelSimulation = () => {
@@ -143,7 +177,7 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
     const firstProcess = processes.find((p) => p.index === 1) || processes[0];
 
     // Reset to only process 1 with zeros
-    setProcesses([
+    const resetProcess = [
       {
         id: firstProcess.id,
         index: 1,
@@ -151,21 +185,47 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
         burst: "0",
         priority: "0",
       },
-    ]);
+    ];
+
+    setProcesses(resetProcess);
+
+    // If there was a previous simulation, pass null to reset the graphs
+    if (abortController === null && !isSimulating) {
+      onSimulationResult(null);
+    }
   };
 
-  // Generate random processes from backend
+  // Update generateRandomProcesses to use the new function
   const generateRandomProcesses = async () => {
     try {
       const response = await fetch(
         `${import.meta.env.VITE_BACKEND_URL}/generate_processes`
       );
       const data = await response.json();
+
+      // Set the processes first
       setProcesses(data);
+
+      // Check if the data contains valid processes
+      const hasValidProcesses = data.some(
+        (p: { burst: string }) => parseInt(p.burst) > 0
+      );
+
+      if (hasValidProcesses && !isSimulating) {
+        // Directly use the data we received
+        simulateWithProcesses(data);
+      }
     } catch (error) {
       console.error("Error generating random processes", error);
     }
   };
+
+  // Expose functions to parent component
+  useImperativeHandle(ref, () => ({
+    triggerSimulation: () => {
+      startSimulation();
+    },
+  }));
 
   return (
     <Stack
@@ -382,6 +442,6 @@ const ProcessInput: React.FC<ProcessInputProps> = ({
       </footer>
     </Stack>
   );
-};
+});
 
 export default ProcessInput;

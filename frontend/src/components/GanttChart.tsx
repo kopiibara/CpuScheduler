@@ -82,8 +82,9 @@ const GanttChart: React.FC<GanttChartProps> = ({ processes, cpuId }) => {
           {/* Process blocks */}
           {processes.map((process) => (
             <div
-              key={process.id}
-              className="absolute h-full rounded-md flex items-center justify-center text-xs text-black font-medium transition-all duration-200 hover:brightness-110"
+              // Add algorithm name to make keys truly unique between different simulations
+              key={`${cpuId}-${process.id}-${process.startTime}-${process.duration}`}
+              className="absolute h-full rounded-md flex items-center justify-center text-xs text-black font-medium transition-all duration-200 hover:brightness-120"
               style={{
                 left: process.startTime * timeUnitWidth,
                 width: process.duration * timeUnitWidth,

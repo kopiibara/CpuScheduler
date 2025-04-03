@@ -2,7 +2,7 @@ import { Box } from "@mui/material";
 import Header from "../../components/Header";
 import ProcessInput from "../../components/ProcessInput";
 import ProcessGraph from "../../components/ProcessGraph";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import "../../style/custom-scrollbar.css"; // Import global styles
 import { SimulationResult } from "../../types/SimulationObject";
 import { useEffect } from "react";
@@ -11,14 +11,41 @@ const MainDashboard = () => {
   const [selectedAlgorithm, setSelectedAlgorithm] = useState("fcfs");
   const [simulationResult, setSimulationResult] =
     useState<SimulationResult | null>(null);
+  const processInputRef = useRef<{ triggerSimulation: () => void } | null>(
+    null
+  );
 
   const handleSimulationResult = (result: SimulationResult) => {
     setSimulationResult(result);
   };
 
+  const handleAlgorithmChange = (algorithm: string) => {
+    // First update the algorithm state
+    setSelectedAlgorithm(algorithm);
+
+    // Only trigger simulation if there are previous results
+    if (processInputRef.current && simulationResult !== null) {
+      // Add a small delay to ensure the algorithm state is updated
+      setTimeout(() => {
+        if (processInputRef.current) {
+          console.log(
+            "Auto-triggering simulation with new algorithm:",
+            algorithm
+          );
+          processInputRef.current.triggerSimulation();
+        }
+      }, 50);
+    }
+  };
+
   useEffect(() => {
     console.log("Dashboard Page");
   }, []);
+
+  // Add this useEffect to log algorithm changes
+  useEffect(() => {
+    console.log("Algorithm changed to:", selectedAlgorithm);
+  }, [selectedAlgorithm]);
 
   return (
     <Box
@@ -56,6 +83,7 @@ const MainDashboard = () => {
           <ProcessInput
             onSimulationResult={handleSimulationResult}
             selectedAlgorithm={selectedAlgorithm}
+            ref={(ref) => (processInputRef.current = ref)}
           />
         </Box>
         <Box
@@ -68,7 +96,7 @@ const MainDashboard = () => {
         >
           <ProcessGraph
             selectedAlgorithm={selectedAlgorithm}
-            onAlgorithmChange={setSelectedAlgorithm}
+            onAlgorithmChange={handleAlgorithmChange}
             simulationResult={simulationResult}
           />
         </Box>

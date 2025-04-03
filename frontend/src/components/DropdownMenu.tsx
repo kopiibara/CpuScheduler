@@ -89,7 +89,7 @@ const DropDownMenu: React.FC<DropDownMenuProps> = ({
           }
         }}
         sx={{
-          backgroundColor: "inherit",
+          backgroundColor: "#080e11",
           color: "#7F8588",
           borderRadius: "0.8rem",
           fontSize: "13px",

@@ -1,4 +1,4 @@
-import { Stack } from "@mui/material";
+import { Stack, Box } from "@mui/material";
 import DropDownMenu from "./DropdownMenu";
 import { useEffect, useState } from "react";
 import GanttChart from "./GanttChart";
@@ -34,6 +34,7 @@ const ProcessGraph: React.FC<ProcessGraphProps> = ({
   const [ganttViewMode, setGanttViewMode] = useState<"chart" | "table">(
     "chart"
   );
+  const [chartKey, setChartKey] = useState(0);
   const cpuAlgorithms = [
     { value: "fcfs", label: "First Come First Serve (FCFS)" },
     { value: "sjf", label: "Shortest Job First (SJF)" },
@@ -43,6 +44,10 @@ const ProcessGraph: React.FC<ProcessGraphProps> = ({
   ];
 
   const handleAlgorithmChange = (value: string | number) => {
+    // Force remount of chart components by updating key
+    setChartKey((prev) => prev + 1);
+
+    // Call the parent component's change handler
     onAlgorithmChange(value.toString());
   };
 
@@ -56,16 +61,20 @@ const ProcessGraph: React.FC<ProcessGraphProps> = ({
   const getGanttChartData = () => {
     if (!simulationResult) return null;
 
+    // Create a completely new object
     const data: { [key: string]: any[] } = {};
+
     Object.entries(simulationResult.timeline).forEach(([core, timeline]) => {
-      data[`cpu${parseInt(core) + 1}`] = timeline.processes.map((process) => ({
-        id: `p${process.id}-${core}`,
-        name: `P${process.id}`,
-        startTime: process.start_time,
-        duration: process.end_time - process.start_time,
-        color: getProcessColor(process.id),
+      // Logic to transform timeline processes to Gantt chart format
+      data[`Core ${core}`] = timeline.processes.map((p) => ({
+        id: `${selectedAlgorithm}-${p.id}`, // Add algorithm to ID
+        name: `P${p.id}`,
+        startTime: p.start_time,
+        duration: p.end_time - p.start_time,
+        color: getProcessColor(p.id),
       }));
     });
+
     return data;
   };
 
@@ -99,7 +108,7 @@ const ProcessGraph: React.FC<ProcessGraphProps> = ({
         alignItems="center"
         justifyContent="space-between"
       >
-        <Stack spacing={1}>
+        <Stack spacing={0.5}>
           <Stack direction="row" spacing={2} alignItems="center">
             <p className="text-[#FBFCFA] text-[16px] font-[600]">TIME GRAPH</p>
             <Stack direction="row" spacing={1}>
@@ -125,16 +134,19 @@ const ProcessGraph: React.FC<ProcessGraphProps> = ({
               </button>
             </Stack>
           </Stack>
-          <p className="text-[#7F8588] text-[14px] font-['Inter']">
+          <p className="text-[#7F8588] text-[13px] font-['Inter']">
             Visualize process execution timeline and scheduling sequence.
           </p>
         </Stack>
-        <DropDownMenu
-          menuItems={cpuAlgorithms}
-          value={selectedAlgorithm}
-          hoverOpen
-          onChange={handleAlgorithmChange}
-        />
+        <Box className="absolute right-13 top-26">
+          {" "}
+          <DropDownMenu
+            menuItems={cpuAlgorithms}
+            value={selectedAlgorithm}
+            hoverOpen
+            onChange={handleAlgorithmChange}
+          />
+        </Box>
       </Stack>
 
       {/* Time Graph Container */}
@@ -243,7 +255,7 @@ const ProcessGraph: React.FC<ProcessGraphProps> = ({
             )}
           </div>
         ) : (
-          <div className="h-[400px] flex items-center justify-center">
+          <div className="h-full flex items-center justify-center">
             <p className="text-[#7F8588]">
               Add processes and start simulation to view results
             </p>
@@ -252,7 +264,7 @@ const ProcessGraph: React.FC<ProcessGraphProps> = ({
       </div>
 
       {/* Gantt Chart Title and Description */}
-      <Stack spacing={1}>
+      <Stack spacing={0.5}>
         <Stack direction="row" spacing={2} alignItems="center">
           <p className="text-[#FBFCFA] text-[16px] font-medium">GANTT CHART</p>
           <Stack direction="row" spacing={1}>
@@ -278,28 +290,31 @@ const ProcessGraph: React.FC<ProcessGraphProps> = ({
             </button>
           </Stack>
         </Stack>
-        <p className="text-[#7F8588] text-[14px] font-['Inter']">
+        <p className="text-[#7F8588] text-[13px] font-['Inter']">
           Process execution timeline per CPU core.
         </p>
       </Stack>
 
       {/* Gantt Chart Container */}
-      <div className="bg-[#1A1D1F] rounded-lg p-6">
+      <div
+        key={`chart-container-${chartKey}`}
+        className="bg-[#1A1D1F] rounded-lg p-6"
+      >
         <div className="space-y-6">
           {simulationResult ? (
             ganttViewMode === "chart" ? (
               getGanttChartData() ? (
-                Object.entries(getGanttChartData()!).map(
+                Object.entries(getGanttChartData() || {}).map(
                   ([cpuId, processes]) => (
                     <GanttChart
-                      key={cpuId}
+                      key={`${selectedAlgorithm}-${cpuId}-${chartKey}`}
+                      cpuId={cpuId}
                       processes={processes}
-                      cpuId={cpuId.toUpperCase()}
                     />
                   )
                 )
               ) : (
-                <div className="h-20 flex items-center justify-center">
+                <div className="h-full flex items-center justify-center">
                   <p className="text-[#7F8588]">
                     Gantt chart will appear after simulation
                   </p>
@@ -358,9 +373,9 @@ const ProcessGraph: React.FC<ProcessGraphProps> = ({
               </div>
             )
           ) : (
-            <div className="h-20 flex items-center justify-center">
+            <div className="h-full flex items-center justify-center">
               <p className="text-[#7F8588]">
-                Gantt chart will appear after simulation
+                Gantt chat will appear after simulation
               </p>
             </div>
           )}

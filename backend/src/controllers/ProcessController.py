@@ -34,9 +34,9 @@ def generate_processes():
         {
             "id": i + 1, 
             "index": i + 1,
-            "arrival": str(random.randint(0, 64)), 
-            "burst": str(random.randint(1, 64)), 
-            "priority": str(random.randint(1, 64))
+            "arrival": str(random.randint(0, 20)), 
+            "burst": str(random.randint(1, 20)), 
+            "priority": str(random.randint(1, 20))
         }
         for i in range(num_processes)
     ]
