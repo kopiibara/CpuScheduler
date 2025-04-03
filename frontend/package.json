@@ -1,11 +1,14 @@
 {
-  "name": "cpuscheduler-react",
+  "name": "cpuscheduler",
+  "productName": "CpuScheduler",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.1.0",
   "type": "module",
+  "description": "A CPU scheduler simulator application.",
+  "author": "duel-learn@devs",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && electron-builder",
+    "build": "tsc && vite build --mode production && electron-builder",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
@@ -19,18 +22,22 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.4.1",
+    "react-transition-group": "^4.4.5",
+    "recharts": "^2.15.1",
     "styled-components": "^6.1.16"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.17",
     "@types/react": "^18.2.64",
     "@types/react-dom": "^18.2.21",
+    "@types/react-transition-group": "^4.4.12",
     "@typescript-eslint/eslint-plugin": "^7.1.1",
     "@typescript-eslint/parser": "^7.1.1",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.21",
     "electron": "^30.0.1",
     "electron-builder": "^24.13.3",
+    "electron-reload": "^2.0.0-alpha.1",
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
@@ -41,5 +48,35 @@
     "vite-plugin-electron": "^0.28.6",
     "vite-plugin-electron-renderer": "^0.14.5"
   },
-  "main": "dist-electron/main.js"
+  "main": "dist-electron/main.js",
+  "build": {
+    "appId": "com.cpuscheduler",
+    "productName": "CpuScheduler",
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "public/**/*"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "icon": "public/cpuScheduler-icon.ico",
+      "artifactName": "CpuScheduler-${version}.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": true
+    },
+    "extraResources": [
+      {
+        "from": "public/backend_server.exe",
+        "to": "resources/backend_server.exe"
+      }
+    ],
+    "compression": "maximum",
+    "asar": true
+  }
 }
