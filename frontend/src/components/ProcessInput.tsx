@@ -1,5 +1,5 @@
 import { Stack, Tooltip, Box } from "@mui/material";
-import { useState, forwardRef, useImperativeHandle } from "react";
+import { useState, forwardRef } from "react";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import CloseIcon from "@mui/icons-material/CloseRounded";
 import { schedulingService } from "../services/SchedulingService";
@@ -8,6 +8,9 @@ import TrashIcon from "../assets/trash.svg";
 import ArrowRight from "../assets/arrow-right.svg";
 import ArrowRightLight from "../assets/arrow-right-light.svg";
 import "../style/custom-scrollbar.css";
+import { useProcessSorting } from "../hooks/useProcessSorting";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 
 // Use unique IDs that don't change when reindexing
 let nextId = 2; // Start with 2 since we already have process 1
@@ -21,7 +24,7 @@ interface ProcessInputProps {
 const ProcessInput = forwardRef<
   { triggerSimulation: () => void },
   ProcessInputProps
->(({ onSimulationResult, selectedAlgorithm }, ref) => {
+>(({ onSimulationResult, selectedAlgorithm }) => {
   const [processes, setProcesses] = useState([
     { id: 1, index: 1, arrival: "0", burst: "0", priority: "0" },
   ]);
@@ -29,6 +32,11 @@ const ProcessInput = forwardRef<
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [abortController, setAbortController] =
     useState<AbortController | null>(null);
+  const [quantumTime, setQuantumTime] = useState("2"); // Default quantum time for RR
+  const [isPreemptive, setIsPreemptive] = useState(false); // State for preemptive mode
+
+  const { sortedProcesses, sortState, toggleSort, resetSort } =
+    useProcessSorting(processes);
 
   const addProcess = () => {
     const newId = nextId++;
@@ -42,6 +50,14 @@ const ProcessInput = forwardRef<
         priority: "0",
       },
     ]);
+  };
+
+  const stopSimulation = () => {
+    if (abortController) {
+      abortController.abort();
+      setIsSimulating(false);
+      setAbortController(null);
+    }
   };
 
   // Modified removeProcess function to ensure simulation uses updated process list
@@ -102,6 +118,15 @@ const ProcessInput = forwardRef<
         return;
       }
 
+      // Validate quantum time for Round Robin
+      if (selectedAlgorithm === "rr") {
+        const quantum = parseInt(quantumTime);
+        if (isNaN(quantum) || quantum <= 0) {
+          setErrorMessage("Quantum time must be a positive number");
+          return;
+        }
+      }
+
       // Create new AbortController for this simulation
       const controller = new AbortController();
       setAbortController(controller);
@@ -124,12 +149,13 @@ const ProcessInput = forwardRef<
       console.log("Sending processes to backend:", formattedProcesses);
       console.log("Selected algorithm:", selectedAlgorithm);
 
-      // Call backend API with abort signal
+      // Call backend API with abort signal and dynamic quantum time
       const result = await schedulingService.simulateScheduling(
         formattedProcesses,
         selectedAlgorithm,
-        selectedAlgorithm === "rr" ? 2 : undefined,
-        controller.signal
+        selectedAlgorithm === "rr" ? parseInt(quantumTime) : undefined,
+        controller.signal,
+        selectedAlgorithm === "priority" ? isPreemptive : undefined
       );
 
       console.log("Received result from backend:", result);
@@ -163,13 +189,6 @@ const ProcessInput = forwardRef<
   // Update startSimulation to use the new function
   const startSimulation = () => {
     simulateWithProcesses(processes);
-  };
-
-  const cancelSimulation = () => {
-    if (abortController) {
-      abortController.abort();
-      setIsSimulating(false);
-    }
   };
 
   const removeAllProcesses = () => {
@@ -220,12 +239,41 @@ const ProcessInput = forwardRef<
     }
   };
 
-  // Expose functions to parent component
-  useImperativeHandle(ref, () => ({
-    triggerSimulation: () => {
-      startSimulation();
-    },
-  }));
+  const SortableColumnHeader = ({
+    field,
+    label,
+  }: {
+    field: "arrival" | "burst" | "priority";
+    label: string;
+  }) => (
+    <div
+      className="text-[#FBFCFA] text-[13px] cursor-pointer hover:text-[#60E2AE] transition-colors duration-200 flex items-center gap-1"
+      onClick={() => toggleSort(field)}
+    >
+      {label}
+      {sortState.field === field &&
+        (sortState.direction === "asc" ? (
+          <ArrowUpwardIcon fontSize="small" />
+        ) : (
+          <ArrowDownwardIcon fontSize="small" />
+        ))}
+    </div>
+  );
+
+  const ProcessIdHeader = () => (
+    <div
+      className="text-[#FBFCFA] text-[13px] cursor-pointer hover:text-[#60E2AE] transition-colors duration-200 flex items-center gap-1"
+      onClick={resetSort}
+    >
+      {sortState.field ? (
+        <Tooltip title="Click to reset sorting" arrow placement="bottom">
+          <span>PROCESS ID</span>
+        </Tooltip>
+      ) : (
+        "PROCESS ID"
+      )}
+    </div>
+  );
 
   return (
     <Stack
@@ -313,10 +361,10 @@ const ProcessInput = forwardRef<
             gap: "10px",
           }}
         >
-          <div className="text-[#FBFCFA] text-[13px]">PROCESS ID</div>
-          <div className="text-[#FBFCFA] text-[13px]">ARRIVAL TIME</div>
-          <div className="text-[#FBFCFA] text-[13px]">BURST TIME</div>
-          <div className="text-[#FBFCFA] text-[13px]">PRIORITY</div>
+          <ProcessIdHeader />
+          <SortableColumnHeader field="arrival" label="ARRIVAL TIME" />
+          <SortableColumnHeader field="burst" label="BURST TIME" />
+          <SortableColumnHeader field="priority" label="PRIORITY" />
           <div className="text-[#FBFCFA] text-[13px]">
             {processes.length > 2 && (
               <Tooltip
@@ -354,7 +402,7 @@ const ProcessInput = forwardRef<
           className="overflow-y-auto custom-scrollbar overflow-x-hidden"
           style={{ maxHeight: "100%" }}
         >
-          {processes.map((process) => (
+          {sortedProcesses.map((process) => (
             <div
               key={process.id}
               className="grid items-center w-full mb-3"
@@ -412,33 +460,93 @@ const ProcessInput = forwardRef<
         <div className="text-red-500 text-sm mt-2 mb-2">{errorMessage}</div>
       )}
 
-      <footer className="flex items-end justify-between w-full">
-        {isSimulating && (
+      <footer className="flex items-end">
+        {/* Button to start simulation */}
+        <Box flex={1} /> {/* Spacer to push button to the bottom */}
+        <Stack direction="row" spacing={2} alignItems="center">
+          {selectedAlgorithm === "rr" && (
+            <div className="flex items-center gap-2">
+              <label
+                htmlFor="quantum-time"
+                className="text-[#FBFCFA] text-[13px]"
+              >
+                Quantum Time:
+              </label>
+              <input
+                id="quantum-time"
+                type="number"
+                value={quantumTime}
+                onChange={(e) => setQuantumTime(e.target.value)}
+                className="bg-[#242A2D] text-white p-1 rounded-[8px] w-[60px] outline-none border-2 border-transparent hover:border-[#60E2AE] focus:border-[#60E2AE] transition-colors duration-200"
+                min="1"
+              />
+            </div>
+          )}
+          {selectedAlgorithm === "priority" && (
+            <div className="flex items-center gap-2">
+              <label className="text-[#FBFCFA] text-[13px] font-medium">
+                Scheduling Mode:
+              </label>
+              <div className="flex items-center gap-3 bg-[#242A2D] px-3 py-1.5 rounded-xl">
+                <span
+                  onClick={() => setIsPreemptive(false)}
+                  className={`text-[13px] font-medium px-2 py-1 rounded-lg cursor-pointer transition-all duration-300 ${
+                    !isPreemptive
+                      ? "bg-[#60E2AE] text-[#242A2D] shadow-sm"
+                      : "text-[#7F8588] hover:text-[#FBFCFA]"
+                  }`}
+                >
+                  Non-Preemptive
+                </span>
+                <span
+                  onClick={() => setIsPreemptive(true)}
+                  className={`text-[13px] font-medium px-2 py-1 rounded-lg cursor-pointer transition-all duration-300 ${
+                    isPreemptive
+                      ? "bg-[#60E2AE] text-[#242A2D] shadow-sm"
+                      : "text-[#7F8588] hover:text-[#FBFCFA]"
+                  }`}
+                >
+                  Preemptive
+                </span>
+              </div>
+            </div>
+          )}
+          {isSimulating && (
+            <button
+              onClick={stopSimulation}
+              className="group flex items-center gap-2 text-[#242A2D] text-[14px] hover:text-[#E26062] cursor-pointer"
+            >
+              STOP SIMULATION
+              <img
+                src="/stop.svg"
+                alt="stop"
+                className="w-4 h-auto block group-hover:hidden transition-all duration-200"
+              />
+              <img
+                src="/stop-light.svg"
+                alt="stop"
+                className="w-4 h-auto hidden group-hover:block transition-all duration-200"
+              />
+            </button>
+          )}
           <button
-            onClick={cancelSimulation}
-            className="text-[#E26062] text-[14px] hover:text-red-400 cursor-pointer"
+            onClick={startSimulation}
+            disabled={isSimulating}
+            className="group flex items-center gap-2 text-[#242A2D] text-[14px] hover:text-[#60E2AE] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            CANCEL
+            {isSimulating ? "SIMULATING..." : "START SIMULATION"}
+            <img
+              src={ArrowRight}
+              alt="arrow"
+              className="w-4 h-auto block group-hover:hidden transition-all duration-200"
+            />
+            <img
+              src={ArrowRightLight}
+              alt="arrow"
+              className="w-4 h-auto hidden group-hover:block transition-all duration-200"
+            />
           </button>
-        )}
-        <Box flex={1} /> {/* Spacer to push button to the right */}
-        <button
-          onClick={startSimulation}
-          disabled={isSimulating}
-          className="group flex items-center gap-2 text-[#242A2D] text-[14px] hover:text-[#60E2AE] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isSimulating ? "SIMULATING..." : "START SIMULATION"}
-          <img
-            src={ArrowRight}
-            alt="arrow"
-            className="w-4 h-auto block group-hover:hidden transition-all duration-200"
-          />
-          <img
-            src={ArrowRightLight}
-            alt="arrow"
-            className="w-4 h-auto hidden group-hover:block transition-all duration-200"
-          />
-        </button>
+        </Stack>
       </footer>
     </Stack>
   );
