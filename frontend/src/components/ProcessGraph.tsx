@@ -138,7 +138,7 @@ const ProcessGraph: React.FC<ProcessGraphProps> = ({
             Visualize process execution timeline and scheduling sequence.
           </p>
         </Stack>
-        <Box className="absolute right-13 top-26">
+        <Box className="absolute right-13 top-26 z-10">
           {" "}
           <DropDownMenu
             menuItems={cpuAlgorithms}

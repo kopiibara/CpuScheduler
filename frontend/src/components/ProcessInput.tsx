@@ -1,5 +1,5 @@
 import { Stack, Tooltip, Box } from "@mui/material";
-import { useState, forwardRef } from "react";
+import { useState, forwardRef, useImperativeHandle } from "react";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import CloseIcon from "@mui/icons-material/CloseRounded";
 import { schedulingService } from "../services/SchedulingService";
@@ -11,6 +11,7 @@ import "../style/custom-scrollbar.css";
 import { useProcessSorting } from "../hooks/useProcessSorting";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import ComputerIcon from "@mui/icons-material/ComputerRounded";
 
 // Use unique IDs that don't change when reindexing
 let nextId = 2; // Start with 2 since we already have process 1
@@ -24,7 +25,7 @@ interface ProcessInputProps {
 const ProcessInput = forwardRef<
   { triggerSimulation: () => void },
   ProcessInputProps
->(({ onSimulationResult, selectedAlgorithm }) => {
+>(({ onSimulationResult, selectedAlgorithm }, ref) => {
   const [processes, setProcesses] = useState([
     { id: 1, index: 1, arrival: "0", burst: "0", priority: "0" },
   ]);
@@ -32,6 +33,7 @@ const ProcessInput = forwardRef<
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [abortController, setAbortController] =
     useState<AbortController | null>(null);
+
   const [quantumTime, setQuantumTime] = useState("2"); // Default quantum time for RR
   const [isPreemptive, setIsPreemptive] = useState(false); // State for preemptive mode
 
@@ -50,14 +52,6 @@ const ProcessInput = forwardRef<
         priority: "0",
       },
     ]);
-  };
-
-  const stopSimulation = () => {
-    if (abortController) {
-      abortController.abort();
-      setIsSimulating(false);
-      setAbortController(null);
-    }
   };
 
   // Modified removeProcess function to ensure simulation uses updated process list
@@ -191,6 +185,14 @@ const ProcessInput = forwardRef<
     simulateWithProcesses(processes);
   };
 
+  const stopSimulation = () => {
+    if (abortController) {
+      abortController.abort();
+      setIsSimulating(false);
+      setAbortController(null);
+    }
+  };
+
   const removeAllProcesses = () => {
     // Find the first process
     const firstProcess = processes.find((p) => p.index === 1) || processes[0];
@@ -239,6 +241,30 @@ const ProcessInput = forwardRef<
     }
   };
 
+  const fetchSystemProcesses = async () => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/system_processes`
+      );
+      const data = await response.json();
+
+      // Set the processes first
+      setProcesses(data);
+
+      // Check if the data contains valid processes
+      const hasValidProcesses = data.some(
+        (p: { burst: string }) => parseInt(p.burst) > 0
+      );
+
+      if (hasValidProcesses && !isSimulating) {
+        // Directly use the data we received
+        simulateWithProcesses(data);
+      }
+    } catch (error) {
+      console.error("Error fetching system processes", error);
+    }
+  };
+
   const SortableColumnHeader = ({
     field,
     label,
@@ -274,6 +300,13 @@ const ProcessInput = forwardRef<
       )}
     </div>
   );
+
+  // Expose functions to parent component
+  useImperativeHandle(ref, () => ({
+    triggerSimulation: () => {
+      startSimulation();
+    },
+  }));
 
   return (
     <Stack
@@ -348,6 +381,32 @@ const ProcessInput = forwardRef<
                 <AddRoundedIcon fontSize="medium" />
               </button>
             </Tooltip>
+            <Tooltip
+  title="Fetch System Processes"
+  arrow
+  placement="bottom"
+  componentsProps={{
+    tooltip: {
+      sx: {
+        bgcolor: "#242A2D",
+        color: "#FBFCFA",
+        borderRadius: "8px",
+        padding: "0.5rem 1rem",
+        fontSize: "0.75rem",
+        "& .MuiTooltip-arrow": {
+          color: "#242A2D",
+        },
+      },
+    },
+  }}
+>
+  <button
+    onClick={fetchSystemProcesses}
+    className="bg-white w-8 h-8 rounded-lg font-semibold hover:bg-[#60E2AE] transition-all duration-200 flex items-center justify-center cursor-pointer"
+  >
+    <ComputerIcon fontSize="small" />
+  </button>
+</Tooltip>
           </Stack>
         </Stack>
       </div>

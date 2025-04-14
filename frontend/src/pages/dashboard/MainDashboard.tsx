@@ -2,10 +2,9 @@ import { Box } from "@mui/material";
 import Header from "../../components/Header";
 import ProcessInput from "../../components/ProcessInput";
 import ProcessGraph from "../../components/ProcessGraph";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import "../../style/custom-scrollbar.css"; // Import global styles
 import { SimulationResult } from "../../types/SimulationObject";
-import { useEffect } from "react";
 
 const MainDashboard = () => {
   const [selectedAlgorithm, setSelectedAlgorithm] = useState("fcfs");
