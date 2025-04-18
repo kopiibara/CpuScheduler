@@ -1,0 +1,11 @@
+#After cloning, open terminal and do the following
+
+# Run first the following:
+.\venv\Scripts\Activate.ps1
+
+# After go to designated folders and run the following:
+backend> pip install -r requirements.txt
+backend> uvicorn main:app --reload  
+
+frontend> npm install
+frontend> npm run dev
