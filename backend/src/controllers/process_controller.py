@@ -4,6 +4,15 @@ import psutil
 def get_all_processes():
     return process_service.fetch_process_list()
 
+def get_grouped_processes():
+    """
+    Get all processes grouped by application name and sorted by importance
+    
+    Returns:
+        dict: Dictionary with application names as keys and lists of sorted process info
+    """
+    return process_service.fetch_grouped_processes()
+
 def set_process_priority(pid, priority_level):
     """
     Set the scheduling priority of a process
@@ -32,5 +41,3 @@ def set_process_affinity(pid, cores):
         cores (list): List of core indices
     """
     return process_service.set_process_affinity(pid, cores)
-
-

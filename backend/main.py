@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.routes import process_routes  # import your router
 from src.routes import system_info_routes  # import your router
+from src.routes import scheduling_routes
+
 
 app = FastAPI()
 
@@ -16,6 +18,7 @@ app.add_middleware(
 # Register routes
 app.include_router(process_routes.router)
 app.include_router(system_info_routes.router)
+app.include_router(scheduling_routes.router)
 
 import uvicorn
 
