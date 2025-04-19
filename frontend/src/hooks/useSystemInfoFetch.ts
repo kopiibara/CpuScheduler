@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import { useSystemInfo } from "../context/SystemInfoContext";
 
 /**
@@ -7,7 +6,6 @@ import { useSystemInfo } from "../context/SystemInfoContext";
  * @param minimumLoadingTime - Minimum time in ms to show the loading screen
  */
 export const useSystemInfoFetch = (minimumLoadingTime = 3000) => {
-  const navigate = useNavigate();
   const { setSystemInfo, setLoading, setError } = useSystemInfo();
   const [fetchProgress, setFetchProgress] = useState(0);
   const [dataFetched, setDataFetched] = useState(false);
@@ -76,11 +74,7 @@ export const useSystemInfoFetch = (minimumLoadingTime = 3000) => {
       setTimeout(() => {
         setFetchProgress(100);
         if (progressInterval) clearInterval(progressInterval);
-
-        // Navigate shortly after showing 100%
-        setTimeout(() => {
-          navigate("/dashboard");
-        }, 500);
+        // REMOVED NAVIGATION CODE HERE
       }, additionalWaitTime);
     } catch (err) {
       console.error("Error fetching system info:", err);
@@ -88,10 +82,6 @@ export const useSystemInfoFetch = (minimumLoadingTime = 3000) => {
       setError(
         `Failed to fetch system information: ${errorMessage}. Please check if the backend server is running.`
       );
-
-      // Calculate time elapsed since fetch started
-      const timeElapsed = Date.now() - fetchStartTimeRef.current;
-      const additionalWaitTime = Math.max(0, minimumLoadingTime - timeElapsed);
 
       // Handle error progress - slowly fill to 100% over the remaining minimum time
       if (progressInterval) clearInterval(progressInterval);
@@ -111,22 +101,11 @@ export const useSystemInfoFetch = (minimumLoadingTime = 3000) => {
         });
       }, 100);
 
-      // Navigate to dashboard after minimum time, even with error
-      setTimeout(() => {
-        if (errorInterval) clearInterval(errorInterval);
-        navigate("/dashboard");
-      }, additionalWaitTime + 1500);
+      // REMOVED NAVIGATION CODE HERE
     } finally {
       setLoading(false);
     }
-  }, [
-    navigate,
-    setSystemInfo,
-    setLoading,
-    setError,
-    minimumLoadingTime,
-    // Remove dataFetched from dependencies
-  ]);
+  }, [setSystemInfo, setLoading, setError, minimumLoadingTime, dataFetched]);
 
   // Return values and functions to be used in the component
   return {

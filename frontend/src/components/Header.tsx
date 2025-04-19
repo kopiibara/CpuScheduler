@@ -19,7 +19,7 @@ const Header = () => {
     <>
       <header className="flex justify-baseline w-screen items-center border-b-2 border-[#242A2D]">
         <Stack direction="row" spacing={2} className="w-full">
-          <Box className="flex w-full px-10 py-5 items-center">
+          <Box className="flex w-full px-6 py-5 items-center">
             <img
               src={cpuSchedulerIcon}
               alt="CPU Scheduler"
@@ -31,7 +31,7 @@ const Header = () => {
           </Box>
           <button
             onClick={handleOpenModal}
-            className="text-[#242A2D] hover:text-[#60E2AE] pr-3 cursor-pointer whitespace-nowrap text-[16px] flex items-center"
+            className="text-[#242A2D] hover:text-[#60E2AE] pr-3 cursor-pointer whitespace-nowrap text-[16px] flex items-center transition-all duration-200 ease-in-out"
           >
             <InfoIcon sx={{ mr: 1, fontSize: 20 }} />
             SYSTEM INFO

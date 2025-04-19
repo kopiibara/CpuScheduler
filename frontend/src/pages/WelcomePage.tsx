@@ -1,20 +1,71 @@
 import { Stack, Box, LinearProgress } from "@mui/material";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSystemInfoFetch } from "../hooks/useSystemInfoFetch";
+import { useProcesses } from "../context/ProcessContext";
 import WindowsButtons from "../components/WindowsButtons";
 import cpuSchedulerIcon from "../assets/cpuScheduler-icon.svg";
+import { useNavigate } from "react-router-dom";
 
 const WelcomePage = () => {
   const { fetchProgress, fetchSystemInfo } = useSystemInfoFetch(3000); // 3 seconds minimum loading time
+  const { fetchProcesses, isInitialized } = useProcesses();
+  const [totalProgress, setTotalProgress] = useState<number>(0);
+  const navigate = useNavigate();
 
-  // Trigger the fetch on component mount
+  // Trigger both fetches on component mount
   useEffect(() => {
-    fetchSystemInfo();
-  }, [fetchSystemInfo]);
+    const loadAllData = async () => {
+      try {
+        console.log("Starting data fetches...");
+        // Start both fetches in parallel with error handling
+        const results = await Promise.all([
+          fetchSystemInfo().catch((e) => {
+            console.error("System info fetch error:", e);
+            return null;
+          }),
+          fetchProcesses().catch((e) => {
+            console.error("Processes fetch error:", e);
+            return null;
+          }),
+        ]);
+        console.log("Both fetches completed:", results);
+      } catch (error) {
+        console.error("Error in loadAllData:", error);
+      }
+    };
 
+    loadAllData();
+  }, [fetchSystemInfo, fetchProcesses]);
+
+  // Calculate combined progress
   useEffect(() => {
-    console.log("Welcome Page");
-  }, []);
+    // System info is 60% of total progress, processes is 40%
+    const systemInfoWeight = 0.6;
+    const processesWeight = 0.4;
+
+    // If processes initialized, count as 100% for that part
+    const processProgress = isInitialized ? 100 : 0;
+
+    // Combine both progress values with their weights
+    const combinedProgress =
+      fetchProgress * systemInfoWeight + processProgress * processesWeight;
+
+    setTotalProgress(combinedProgress);
+  }, [fetchProgress, isInitialized]);
+
+  // Add navigation effect - redirect when everything is loaded
+  useEffect(() => {
+    // Only navigate when totalProgress reaches 100%
+    if (totalProgress >= 100 && isInitialized) {
+      // Add a small delay for better UX so user can see "Redirecting..." text
+      const redirectTimer = setTimeout(() => {
+        console.log("Loading complete, navigating to dashboard");
+        navigate("/dashboard");
+      }, 1000);
+
+      return () => clearTimeout(redirectTimer);
+    }
+  }, [totalProgress, isInitialized, navigate]);
 
   return (
     <Box
@@ -61,9 +112,11 @@ const WelcomePage = () => {
         </Box>
 
         <p className="text-[#5A6062] font-['Inter'] text-center">
-          {fetchProgress < 80
+          {totalProgress < 50
             ? "Getting system information..."
-            : fetchProgress < 100
+            : totalProgress < 80
+            ? "Loading process data..."
+            : totalProgress < 100
             ? "Finalizing system configuration..."
             : "Redirecting to dashboard..."}
         </p>
@@ -71,7 +124,7 @@ const WelcomePage = () => {
         <Box sx={{ width: "80%", mb: 2 }}>
           <LinearProgress
             variant="determinate"
-            value={fetchProgress}
+            value={totalProgress}
             sx={{
               height: 8,
               borderRadius: 4,
