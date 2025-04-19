@@ -1,13 +1,22 @@
 {
-  "name": "frontend",
+  "name": "cpuscheduler-v2",
+  "productName": "CpuScheduler_v2",
+  "description": "A CPU scheduler simulator for educational purposes, built with React, Electron, and TypeScript.",
+  "author": {
+    "name": "Cj Juliane",
+    "nickname": "Kopibara",
+    "email": "juliane.carljamesbscs2022@gmail.com"
+  },
   "private": true,
-  "version": "0.0.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && electron-builder",
+    "build": "npm run clean && tsc && vite build && electron-builder",
+    "clean": "rimraf release",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -32,10 +41,41 @@
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "rimraf": "^6.0.1",
     "typescript": "^5.2.2",
     "vite": "^5.1.6",
     "vite-plugin-electron": "^0.28.6",
     "vite-plugin-electron-renderer": "^0.14.5"
   },
-  "main": "dist-electron/main.js"
+  "main": "dist-electron/main.js",
+  "build": {
+    "appId": "com.cpuscheduler.v2",
+    "productName": "CpuScheduler_v2",
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "public/**/*"
+    ],
+    "extraFiles": [
+      {
+        "from": "public/backend_server.exe",
+        "to": "resources/backend_server.exe"
+      }
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "icon": "public/cpuScheduler-icon.ico",
+      "artifactName": "CpuScheduler-${version}.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": true
+    },
+    "compression": "maximum",
+    "asar": true
+  }
 }
