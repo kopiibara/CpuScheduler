@@ -5,7 +5,9 @@ import { Process } from "../../types/ProcessObject";
 import ArrowDownIcon from "@mui/icons-material/ArrowDropDownRounded";
 import ArrowUpIcon from "@mui/icons-material/ArrowDropUpRounded";
 import Selection from "../../components/Selection";
+import PerformanceModal from "../../components/PerformanceModal";
 import axios from "axios";
+import { useProcessSettings } from "../../context/ProcessSettingsContext";
 
 // Helper to format CPU affinity into a readable format
 const formatCpuAffinity = (affinity?: number[]): string => {
@@ -17,7 +19,7 @@ const formatCpuAffinity = (affinity?: number[]): string => {
     return `CPU ${affinity[0]}`;
   }
 
-  if (affinity.length > 4) {
+  if (affinity.length > 8) {
     return `CPUs ${affinity[0]}-${affinity[affinity.length - 1]}`;
   }
 
@@ -61,15 +63,40 @@ const AppProcessesList: React.FC<AppProcessesListProps> = ({
   processes: initialProcesses,
   icon,
 }) => {
+  // Get process settings from context
+  const { getProcessSettings, updateProcessSettings } = useProcessSettings();
+
   // Keep a local copy of processes that we can update immediately
   const [processes, setProcesses] = useState<Process[]>(initialProcesses);
+  // Add sorting state
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(
+    null
+  );
 
-  // Update local processes when props change
+  // Update local processes when props change, but preserve user settings
   useEffect(() => {
-    setProcesses(initialProcesses);
-  }, [initialProcesses]);
+    // Apply saved settings to the incoming processes
+    const processesWithSettings = initialProcesses.map((process) => {
+      const savedSettings = getProcessSettings(process.pid);
 
-  const [hoveredButton, setHoveredButton] = useState<{
+      return {
+        ...process,
+        // Use saved settings if they exist
+        priority:
+          savedSettings.priority !== undefined
+            ? savedSettings.priority
+            : process.priority,
+        cpu_affinity: savedSettings.cpu_affinity || process.cpu_affinity,
+      };
+    });
+
+    setProcesses(processesWithSettings);
+    // Reset sort direction when processes change
+    setSortDirection(null);
+  }, [initialProcesses, getProcessSettings]);
+
+  // Add active button state
+  const [activeButton, setActiveButton] = useState<{
     pid: number;
     type: string;
   } | null>(null);
@@ -95,6 +122,10 @@ const AppProcessesList: React.FC<AppProcessesListProps> = ({
   // Add a state for completion notification
   const [showCompletionNotice, setShowCompletionNotice] =
     useState<boolean>(false);
+
+  // Add state for performance modal
+  const [graphModalOpen, setGraphModalOpen] = useState<boolean>(false);
+  const [selectedGraphPid, setSelectedGraphPid] = useState<number | null>(null);
 
   // Fetch FCFS status periodically
   useEffect(() => {
@@ -217,6 +248,15 @@ const AppProcessesList: React.FC<AppProcessesListProps> = ({
     pid: number,
     type: "priority" | "cpu_affinity"
   ) => {
+    const buttonType = type === "cpu_affinity" ? "cpu" : "priority";
+
+    // Toggle the active state
+    if (activeButton?.pid === pid && activeButton?.type === buttonType) {
+      setActiveButton(null);
+    } else {
+      setActiveButton({ pid, type: buttonType });
+    }
+
     setSelectionAnchor(event.currentTarget);
     setSelectionType(type);
     setSelectedPid(pid);
@@ -227,6 +267,7 @@ const AppProcessesList: React.FC<AppProcessesListProps> = ({
     setSelectionAnchor(null);
     setSelectionType(null);
     setSelectedPid(null);
+    setActiveButton(null); // Reset active button when selection is closed
   };
 
   // Handle successful selection
@@ -236,6 +277,13 @@ const AppProcessesList: React.FC<AppProcessesListProps> = ({
     newValue: number | number[]
   ) => {
     console.log(`Update ${type} for PID ${pid} with value:`, newValue);
+
+    // Save the setting to context
+    if (type === "priority") {
+      updateProcessSettings(pid, { priority: newValue as number });
+    } else {
+      updateProcessSettings(pid, { cpu_affinity: newValue as number[] });
+    }
 
     // Immediately update the local state for better UX
     setProcesses((prevProcesses) =>
@@ -254,6 +302,31 @@ const AppProcessesList: React.FC<AppProcessesListProps> = ({
 
     // Don't immediately refresh - give the system time to apply changes
     // and to give the user feedback about their change
+  };
+
+  // Add sort function
+  const handleSortByPid = () => {
+    if (fcfsEnabled) return; // Don't allow sorting when FCFS is enabled
+
+    if (sortDirection === null) {
+      // First click - sort ascending
+      setProcesses([...processes].sort((a, b) => a.pid - b.pid));
+      setSortDirection("asc");
+    } else if (sortDirection === "asc") {
+      // Second click - sort descending
+      setProcesses([...processes].sort((a, b) => b.pid - a.pid));
+      setSortDirection("desc");
+    } else {
+      // Third click - reset to original order
+      setProcesses([...initialProcesses]);
+      setSortDirection(null);
+    }
+  };
+
+  // Handle row click for performance modal
+  const handleProcessRowClick = (pid: number) => {
+    setSelectedGraphPid(pid);
+    setGraphModalOpen(true);
   };
 
   // Find the currently selected process
@@ -277,8 +350,8 @@ const AppProcessesList: React.FC<AppProcessesListProps> = ({
                 <img
                   src={icon}
                   alt=""
-                  width="48"
-                  height="48"
+                  width="40"
+                  height="40"
                   className="process-icon"
                 />
               ) : (
@@ -426,7 +499,24 @@ const AppProcessesList: React.FC<AppProcessesListProps> = ({
           <table className="w-full">
             <thead className="sticky top-0 bg-[#080e11] border-b-2 border-[#242a2d]">
               <tr>
-                <th className="text-left py-2 px-6">PID</th>
+                <th
+                  className={`text-left py-2 px-6 cursor-pointer ${
+                    !fcfsEnabled ? "hover:text-[#60e2ae]" : ""
+                  }`}
+                  onClick={handleSortByPid}
+                  title={
+                    fcfsEnabled
+                      ? "Sorting disabled during FCFS"
+                      : "Click to sort, double-click to reset"
+                  }
+                >
+                  PID{" "}
+                  {sortDirection === "asc"
+                    ? "↑"
+                    : sortDirection === "desc"
+                    ? "↓"
+                    : ""}
+                </th>
                 <th className="text-left py-2 px-1">Name</th>
                 <th className="text-left py-2 px-1">Status</th>
                 <th className="text-left py-2 px-1">Active CPU</th>
@@ -438,7 +528,8 @@ const AppProcessesList: React.FC<AppProcessesListProps> = ({
               {processes.map((process) => (
                 <tr
                   key={process.pid}
-                  className="border-b-2 border-[#242a2d] text-[#a8a8a8]"
+                  className="border-b-2 border-[#242a2d] text-[#a8a8a8] cursor-pointer hover:bg-[#101619]"
+                  onClick={() => handleProcessRowClick(process.pid)}
                 >
                   <td className="py-3 px-6">{process.pid}</td>
                   <td className="py-3 w-{175px} max-w-[350px] overflow-hidden">
@@ -448,17 +539,14 @@ const AppProcessesList: React.FC<AppProcessesListProps> = ({
                   <td className="py-3">
                     <button
                       className="cursor-pointer hover:text-[#60e2ae] hover:bg-[#60E2AE19] pl-2 py-1 rounded-[8px] flex items-center justify-between w-full transition-all duration-200 ease-in-out"
-                      onMouseEnter={() =>
-                        setHoveredButton({ pid: process.pid, type: "cpu" })
-                      }
-                      onMouseLeave={() => setHoveredButton(null)}
-                      onClick={(e) =>
-                        handleButtonClick(e, process.pid, "cpu_affinity")
-                      }
+                      onClick={(e) => {
+                        e.stopPropagation(); // Stop event from bubbling up to parent row
+                        handleButtonClick(e, process.pid, "cpu_affinity");
+                      }}
                     >
                       <span>{formatCpuAffinity(process.cpu_affinity)}</span>
-                      {hoveredButton?.pid === process.pid &&
-                      hoveredButton?.type === "cpu" ? (
+                      {activeButton?.pid === process.pid &&
+                      activeButton?.type === "cpu" ? (
                         <ArrowUpIcon />
                       ) : (
                         <ArrowDownIcon />
@@ -468,17 +556,14 @@ const AppProcessesList: React.FC<AppProcessesListProps> = ({
                   <td className="py-3 pr-2">
                     <button
                       className="cursor-pointer hover:text-[#60e2ae] hover:bg-[#60E2AE19] pl-3 pr-1 py-1 rounded-[8px] flex items-center justify-between w-full transition-all duration-200 ease-in-out"
-                      onMouseEnter={() =>
-                        setHoveredButton({ pid: process.pid, type: "priority" })
-                      }
-                      onMouseLeave={() => setHoveredButton(null)}
-                      onClick={(e) =>
-                        handleButtonClick(e, process.pid, "priority")
-                      }
+                      onClick={(e) => {
+                        e.stopPropagation(); // Stop event from bubbling up to parent row
+                        handleButtonClick(e, process.pid, "priority");
+                      }}
                     >
                       <span>{formatPriority(process.priority as number)}</span>
-                      {hoveredButton?.pid === process.pid &&
-                      hoveredButton?.type === "priority" ? (
+                      {activeButton?.pid === process.pid &&
+                      activeButton?.type === "priority" ? (
                         <ArrowUpIcon />
                       ) : (
                         <ArrowDownIcon />
@@ -528,6 +613,19 @@ const AppProcessesList: React.FC<AppProcessesListProps> = ({
           onClose={handleCloseSelection}
           onSuccess={(newValue) =>
             handleSelectionSuccess(selectedProcess.pid, selectionType, newValue)
+          }
+        />
+      )}
+
+      {/* Performance Modal */}
+      {selectedGraphPid && (
+        <PerformanceModal
+          open={graphModalOpen}
+          onClose={() => setGraphModalOpen(false)}
+          pid={selectedGraphPid}
+          processName={
+            processes.find((p) => p.pid === selectedGraphPid)?.name ||
+            `Process ${selectedGraphPid}`
           }
         />
       )}

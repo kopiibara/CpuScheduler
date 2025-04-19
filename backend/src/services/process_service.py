@@ -4,7 +4,7 @@ import base64
 from io import BytesIO
 import sys
 import tempfile
-import time  # Add this at the top with other imports
+import time
 
 # Import Windows-specific modules only if on Windows
 if sys.platform == 'win32':
@@ -13,6 +13,17 @@ if sys.platform == 'win32':
     import win32ui
     import win32con
     from PIL import Image
+
+# Update these constants for better performance
+_ICON_BATCH_SIZE = 100  # Increased from 20 to handle more icons
+_MAX_ICON_EXTRACTION_TIME = 0.5  # Slightly increased timeout
+_PROCESS_CACHE_TTL = 3  # Reduced cache time for more frequent updates
+
+# Add these global variables for caching
+_process_cache = {}
+_last_cache_time = 0
+_icon_cache = {}  # Icon cache
+_known_processes = set()  # Track known process paths to identify new ones
 
 def get_file_description(exe_path):
     if sys.platform != 'win32':
@@ -194,36 +205,56 @@ def fetch_process_list():
             continue
     return processes
 
-def fetch_grouped_processes():
+def fetch_grouped_processes(skip_icons=False, limit=None):
     """
     Group processes by application name and rank them by importance
     
+    Args:
+        skip_icons (bool): If True, skip icon extraction to improve performance
+        limit (int, optional): Limit the number of processes to fetch per app
+        
     Returns:
-        dict: Dictionary with application names as keys and lists of process info as values
+        dict: Dictionary with application names as keys and lists of process info
     """
-    grouped = {}
+    global _process_cache, _last_cache_time, _icon_cache, _known_processes
+    
+    # Return cached data if recent enough
+    if time.time() - _last_cache_time < _PROCESS_CACHE_TTL:
+        return _process_cache
 
+    grouped = {}
+    current_processes = set()  # Track processes in this fetch cycle
+
+    # Collect all process info
     for proc in psutil.process_iter(['pid', 'name', 'exe']):
         try:
             name = proc.info['name']
             exe_path = proc.info.get('exe')
+            
+            # Skip processes without valid exe paths
+            if not exe_path or not os.path.exists(exe_path):
+                continue
+                
+            # Track current processes
+            current_processes.add(exe_path)
+            
             display_name = get_display_app_name(name, exe_path)
             
             # Calculate importance metrics
             importance_score = 0
+            
             try:
                 with proc.oneshot():  # Efficiently get multiple info in one call
+                    status = proc.status()
                     cpu_percent = proc.cpu_percent(interval=0.1)
                     memory_percent = proc.memory_percent()
-                    
-                    # Calculate importance score - higher values = more important
                     importance_score = cpu_percent + (memory_percent * 0.5)
                     
-                    # Add bonus for specific process types that are typically important
+                    # Add bonus for specific process types
                     if name.lower() in ['explorer.exe', 'system']:
                         importance_score += 10
             except (psutil.NoSuchProcess, psutil.AccessDenied):
-                pass
+                status = "unknown"
 
             if display_name not in grouped:
                 grouped[display_name] = []
@@ -233,10 +264,12 @@ def fetch_grouped_processes():
                 'pid': proc.info['pid'],
                 'name': name,
                 'exe': exe_path,
-                'status': proc.status(),
+                'status': status,
                 'importance_score': importance_score,
-                'cpu_percent': cpu_percent if 'cpu_percent' in locals() else 0,
-                'memory_percent': memory_percent if 'memory_percent' in locals() else 0,
+                'description': None,  # Will be populated later if needed
+                'icon': None,  # Initialize with None
+                'cpu_percent': cpu_percent,
+                'memory_percent': memory_percent
             }
             
             # Add CPU affinity if available
@@ -251,11 +284,6 @@ def fetch_grouped_processes():
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 proc_info['priority'] = None
                 
-            # Try to get icon and description if available
-            if proc_info['exe']:
-                proc_info['icon'] = get_icon_base64(proc_info['exe'])
-                proc_info['description'] = get_file_description(proc_info['exe'])
-                
             grouped[display_name].append(proc_info)
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
@@ -263,7 +291,113 @@ def fetch_grouped_processes():
     # Sort processes within each group by importance
     for app_name in grouped:
         grouped[app_name].sort(key=lambda x: x['importance_score'], reverse=True)
+        # Apply limit if specified
+        if limit and len(grouped[app_name]) > limit:
+            grouped[app_name] = grouped[app_name][:limit]
+    
+    # If skip_icons is True, return without icons
+    if skip_icons:
+        _process_cache = grouped.copy()
+        _last_cache_time = time.time()
+        return grouped
+    
+    # Identify new processes that weren't seen before
+    new_processes = current_processes - _known_processes
+    
+    # Extract icons - prioritize new applications first
+    icon_extraction_count = 0
+    # First batch: Process new applications
+    for app_name, processes in grouped.items():
+        if not processes:
+            continue
+        
+        # Get the most important process for this app
+        main_process = processes[0]
+        exe_path = main_process['exe']
+        
+        if not exe_path:
+            continue
+            
+        # Prioritize new applications - extract their icons first
+        if exe_path in new_processes and exe_path not in _icon_cache:
+            if icon_extraction_count >= _ICON_BATCH_SIZE // 2:  # Use half the batch size for new apps
+                break  # Reached new app extraction limit
+                
+            # Extract icon
+            icon_start = time.time()
+            icon = get_icon_base64(exe_path)
+            
+            # Check timeout
+            icon_extraction_time = time.time() - icon_start
+            if icon_extraction_time > _MAX_ICON_EXTRACTION_TIME:
+                print(f"Icon extraction for {exe_path} took too long ({icon_extraction_time:.2f}s)")
+                
+            icon_extraction_count += 1
+            
+            # Cache the icon if valid
+            if icon:
+                _icon_cache[exe_path] = icon
+                
+                # Apply icon to all processes with same exe path
+                for process in processes:
+                    if process['exe'] == exe_path:
+                        process['icon'] = icon
+                        
+                # Also get description for new applications
+                description = get_file_description(exe_path)
+                if description:
+                    for process in processes:
+                        if process['exe'] == exe_path:
+                            process['description'] = description
 
+    # Second batch: Process remaining applications that need icons
+    remaining_batch = _ICON_BATCH_SIZE - icon_extraction_count
+    if remaining_batch > 0:
+        for app_name, processes in grouped.items():
+            if not processes:
+                continue
+                
+            main_process = processes[0]
+            exe_path = main_process['exe']
+            
+            if not exe_path:
+                continue
+                
+            # Skip if we already processed this in the first batch
+            if exe_path in new_processes:
+                continue
+                
+            # Get icon for this exe_path (use cache if available)
+            if exe_path in _icon_cache:
+                icon = _icon_cache[exe_path]
+                # Apply cached icon to all processes with same exe path
+                for process in processes:
+                    if process['exe'] == exe_path:
+                        process['icon'] = icon
+            else:
+                # Check batch limit
+                if icon_extraction_count >= _ICON_BATCH_SIZE:
+                    break
+                    
+                # Extract icon
+                icon = get_icon_base64(exe_path)
+                icon_extraction_count += 1
+                
+                # Cache the icon if valid
+                if icon:
+                    _icon_cache[exe_path] = icon
+                    
+                    # Apply icon to all processes with same exe path
+                    for process in processes:
+                        if process['exe'] == exe_path:
+                            process['icon'] = icon
+    
+    # Update the known processes list with current processes
+    _known_processes = current_processes
+    
+    # Update cache
+    _process_cache = grouped
+    _last_cache_time = time.time()
     return grouped
 
 def set_process_priority(pid, priority_class):

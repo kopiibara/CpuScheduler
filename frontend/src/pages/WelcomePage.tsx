@@ -4,11 +4,13 @@ import { useSystemInfoFetch } from "../hooks/useSystemInfoFetch";
 import { useProcesses } from "../context/ProcessContext";
 import WindowsButtons from "../components/WindowsButtons";
 import cpuSchedulerIcon from "../assets/cpuScheduler-icon.svg";
+import { useNavigate } from "react-router-dom";
 
 const WelcomePage = () => {
   const { fetchProgress, fetchSystemInfo } = useSystemInfoFetch(3000); // 3 seconds minimum loading time
   const { fetchProcesses, isInitialized } = useProcesses();
   const [totalProgress, setTotalProgress] = useState<number>(0);
+  const navigate = useNavigate();
 
   // Trigger both fetches on component mount
   useEffect(() => {
@@ -50,6 +52,20 @@ const WelcomePage = () => {
 
     setTotalProgress(combinedProgress);
   }, [fetchProgress, isInitialized]);
+
+  // Add navigation effect - redirect when everything is loaded
+  useEffect(() => {
+    // Only navigate when totalProgress reaches 100%
+    if (totalProgress >= 100 && isInitialized) {
+      // Add a small delay for better UX so user can see "Redirecting..." text
+      const redirectTimer = setTimeout(() => {
+        console.log("Loading complete, navigating to dashboard");
+        navigate("/dashboard");
+      }, 1000);
+
+      return () => clearTimeout(redirectTimer);
+    }
+  }, [totalProgress, isInitialized, navigate]);
 
   return (
     <Box

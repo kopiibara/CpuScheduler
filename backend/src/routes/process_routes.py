@@ -49,3 +49,14 @@ def set_process_affinity(pid: int, data: dict = Body(...)):
     cores = data.get("cores", [])
     result = process_controller.set_process_affinity(pid, cores)
     return {"success": result, "message": f"CPU affinity for process {pid} set to cores {cores}"}
+
+@router.get("/{pid}/performance")
+def get_process_performance(pid: int):
+    """
+    Get real-time performance metrics for a specific process.
+    
+    Returns:
+        dict: Contains timestamp, memory usage percentage, CPU usage percentage,
+              and per-core CPU usage data
+    """
+    return process_controller.get_process_performance(pid)

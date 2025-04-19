@@ -1,10 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import "./ProcessesTable.css";
 import NoIcon from "@mui/icons-material/InsertDriveFileRounded";
-import RefreshIcon from "@mui/icons-material/Refresh";
-import AutorenewIcon from "@mui/icons-material/Autorenew";
 import { useProcesses } from "../../context/ProcessContext";
-import { Switch, Tooltip, IconButton } from "@mui/material";
+import BackspaceIcon from "@mui/icons-material/BackspaceRounded";
 
 interface ProcessesTableProps {
   selectedApp: { name: string; processes: any[] } | null;
@@ -21,23 +19,53 @@ const ProcessesTable: React.FC<ProcessesTableProps> = ({
     error,
     searchTerm,
     setSearchTerm,
-    fetchProcesses,
-    isAutoRefreshEnabled,
-    toggleAutoRefresh,
-    lastRefreshed,
+    isInitialized,
   } = useProcesses();
 
-  const handleRefresh = () => {
-    fetchProcesses(true); // Force refresh
+  // Add sorting state
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(
+    null
+  );
+  const [sortedGroups, setSortedGroups] = useState(filteredGroups);
+
+  // Update sorted groups when filtered groups change
+  React.useEffect(() => {
+    setSortedGroups(filteredGroups);
+    // Reset sort direction when data changes
+    setSortDirection(null);
+  }, [filteredGroups]);
+
+  // Handle sorting by name
+  const handleSortByName = () => {
+    if (sortDirection === null) {
+      // First click - sort ascending
+      setSortedGroups(
+        [...filteredGroups].sort((a, b) => a[0].localeCompare(b[0]))
+      );
+      setSortDirection("asc");
+    } else if (sortDirection === "asc") {
+      // Second click - sort descending
+      setSortedGroups(
+        [...filteredGroups].sort((a, b) => b[0].localeCompare(a[0]))
+      );
+      setSortDirection("desc");
+    } else {
+      // Third click - back to ascending (not default)
+      setSortedGroups(
+        [...filteredGroups].sort((a, b) => a[0].localeCompare(b[0]))
+      );
+      setSortDirection("asc");
+    }
   };
 
-  const formatLastRefreshed = () => {
-    if (!lastRefreshed) return "Never";
-
-    return lastRefreshed.toLocaleTimeString();
+  // Add double click handler to reset to default
+  const handleDoubleClickName = () => {
+    setSortedGroups(filteredGroups);
+    setSortDirection(null);
   };
 
-  if (loading && !lastRefreshed) {
+  // Only show loading indicator on initial load, not during search or auto-refresh
+  if (!isInitialized && loading) {
     return (
       <div className="loading-container">
         <div className="loading-spinner"></div>
@@ -55,10 +83,14 @@ const ProcessesTable: React.FC<ProcessesTableProps> = ({
     );
   }
 
+  // Display "No results found" message when searching with no matches
+  const isSearching = searchTerm.trim() !== "";
+  const hasNoSearchResults = isSearching && filteredGroups.length === 0;
+
   return (
     <div className="processes-container h-full">
       <div className="search-refresh-container flex items-center justify-between w-full px-4 py-3">
-        <div className="flex-grow">
+        <div className="flex-grow relative">
           <input
             type="text"
             placeholder="Search applications..."
@@ -66,95 +98,87 @@ const ProcessesTable: React.FC<ProcessesTableProps> = ({
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
           />
-        </div>
-        <div className="refresh-controls flex items-center ml-2">
-          {loading && <div className="mini-loading-spinner mr-2"></div>}
-          <div className="last-refreshed text-xs text-gray-500 mr-2">
-            Last updated: {formatLastRefreshed()}
-          </div>
-          <Tooltip title="Refresh process list">
-            <IconButton
-              onClick={handleRefresh}
-              disabled={loading}
-              size="small"
-              className="refresh-button"
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm("")}
+              className="absolute right-2 top-3.5 transform -translate-y-1/2 text-gray-500 hover:text-[#60e2ae] focus:outline-none"
+              aria-label="Clear search"
             >
-              <RefreshIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip
-            title={
-              isAutoRefreshEnabled
-                ? "Disable auto-refresh"
-                : "Enable auto-refresh"
-            }
-          >
-            <div className="auto-refresh-toggle flex items-center ml-1">
-              <span className="text-xs">Auto</span>
-              <Switch
-                size="small"
-                checked={isAutoRefreshEnabled}
-                onChange={toggleAutoRefresh}
-                color="primary"
-              />
-            </div>
-          </Tooltip>
+              <BackspaceIcon fontSize="small" />
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="table-container custom-scrollbar">
-        <table className="processes-table">
-          <thead>
-            <tr className="text-[#080e11]">
-              <th>Icon</th>
-              <th>
-                Application <span>({filteredGroups.length})</span>
-              </th>
-              <th>Process Count</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredGroups.map(([appName, processes]) => {
-              // Get the icon from the most important process in the group (first one)
-              const mainProcess = processes[0];
-              const isSelected = selectedApp?.name === appName;
-
-              return (
-                <tr
-                  key={appName}
-                  onClick={() => onSelectApp(appName, processes)}
-                  className={isSelected ? "selected-row" : ""}
-                  style={{ cursor: "pointer" }}
+      {hasNoSearchResults ? (
+        <div className="flex items-center justify-center h-64 text-[#5A6062]">
+          No applications match your search
+        </div>
+      ) : (
+        <div className="table-container custom-scrollbar">
+          <table className="processes-table">
+            <thead>
+              <tr className="text-[#080e11]">
+                <th>Icon</th>
+                <th
+                  onClick={handleSortByName}
+                  onDoubleClick={handleDoubleClickName}
+                  className="cursor-pointer hover:text-[#60e2ae]"
+                  title="Click to sort, double-click to reset"
                 >
-                  <td className="icon-cell">
-                    {mainProcess?.icon ? (
-                      <img
-                        src={mainProcess.icon}
-                        alt=""
-                        width="24"
-                        height="24"
-                        className="process-icon"
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center w-6 h-6">
-                        <NoIcon
-                          sx={{
-                            width: 24,
-                            height: 24,
-                            color: "#aaaaaa",
-                          }}
+                  Application <span>({filteredGroups.length})</span>
+                  {sortDirection && (
+                    <span className="ml-1">
+                      {sortDirection === "asc" ? "↑" : "↓"}
+                    </span>
+                  )}
+                </th>
+                <th>Process Count</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedGroups.map(([appName, processes]) => {
+                // Get the icon from the most important process in the group (first one)
+                const mainProcess = processes[0];
+                const isSelected = selectedApp?.name === appName;
+
+                return (
+                  <tr
+                    key={appName}
+                    onClick={() => onSelectApp(appName, processes)}
+                    className={isSelected ? "selected-row" : ""}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <td className="icon-cell">
+                      {mainProcess?.icon ? (
+                        <img
+                          src={mainProcess.icon}
+                          alt=""
+                          width="24"
+                          height="24"
+                          className="process-icon"
                         />
-                      </div>
-                    )}
-                  </td>
-                  <td className="process-name">{appName}</td>
-                  <td>{processes.length}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                      ) : (
+                        <div className="flex items-center justify-center w-6 h-6">
+                          <NoIcon
+                            sx={{
+                              width: 24,
+                              height: 24,
+                              color: "#aaaaaa",
+                            }}
+                          />
+                        </div>
+                      )}
+                    </td>
+                    <td className="process-name">{appName}</td>
+                    <td>{processes.length}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };

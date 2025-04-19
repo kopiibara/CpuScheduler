@@ -139,13 +139,19 @@ const Selection: React.FC<SelectionProps> = ({
     if (type === "priority") {
       setSelectedPriority(currentValue as number);
     } else {
-      setSelectedCores(Array.isArray(currentValue) ? currentValue : []);
+      // If currentValue is an empty array, select all cores
+      if (Array.isArray(currentValue) && currentValue.length === 0) {
+        // Select all available cores
+        setSelectedCores(Array.from({ length: cpuCount }, (_, i) => i));
+      } else {
+        setSelectedCores(Array.isArray(currentValue) ? currentValue : []);
+      }
     }
 
     // Clear any previous error/success messages
     setError(null);
     setSuccess(null);
-  }, [currentValue, type, open]);
+  }, [currentValue, type, open, cpuCount]);
 
   // Priority options mapping
   const priorityOptions = [

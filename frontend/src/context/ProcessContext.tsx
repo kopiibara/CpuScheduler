@@ -37,58 +37,66 @@ export const ProcessProvider: React.FC<{ children: React.ReactNode }> = ({
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [isAutoRefreshEnabled, setIsAutoRefreshEnabled] =
-    useState<boolean>(false);
-  const [refreshInterval, setRefreshInterval] = useState<number>(3000); // 3 seconds default
+    useState<boolean>(true);
+  const [refreshInterval, setRefreshInterval] = useState<number>(1000); // 1 second refresh
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
 
   const fetchProcesses = useCallback(
     async (forceRefresh = false): Promise<void> => {
-      // Skip fetching if we already have data and are not forcing a refresh
-      if (
-        Object.keys(groupedProcesses).length > 0 &&
-        !loading &&
-        !forceRefresh
-      ) {
-        console.log("Processes already loaded, skipping fetch");
-        return; // Just return void
+      if (isInitialLoad) {
+        setLoading(true);
+      } else if (forceRefresh) {
+        // For forced refreshes, use a different approach than full loading screen
+        // You could set a different state here if you wanted a mini-loader
       }
 
       try {
-        setLoading(true);
-        console.log("Fetching processes from API...");
         const response = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/processes/grouped`
+          `${import.meta.env.VITE_BACKEND_URL}/processes/grouped`,
+          {
+            params: { _t: new Date().getTime() }, // Cache busting
+            timeout: 2000, // Short timeout to prevent hanging
+          }
         );
-        console.log("Processes fetched successfully!");
+
         setGroupedProcesses(response.data);
         setError(null);
-        setIsInitialized(true);
+
+        if (!isInitialized) {
+          setIsInitialized(true);
+        }
+
+        if (isInitialLoad) {
+          setIsInitialLoad(false);
+        }
+
         setLastRefreshed(new Date());
       } catch (err) {
         console.error("Error fetching grouped processes:", err);
-        setError("Failed to load processes. Please try again later.");
+        if (isInitialLoad) {
+          setError("Failed to load processes. Please try again later.");
+        }
       } finally {
         setLoading(false);
       }
     },
-    [groupedProcesses, loading]
+    [isInitialized, isInitialLoad]
   );
 
   const toggleAutoRefresh = useCallback(() => {
     setIsAutoRefreshEnabled((prev) => !prev);
   }, []);
 
-  // Set up auto-refresh
   useEffect(() => {
     let intervalId: number | undefined;
 
     if (isAutoRefreshEnabled) {
       intervalId = window.setInterval(() => {
-        fetchProcesses(true); // Force refresh
+        fetchProcesses(true);
       }, refreshInterval);
     }
 
-    // Cleanup function
     return () => {
       if (intervalId) {
         clearInterval(intervalId);
@@ -96,7 +104,6 @@ export const ProcessProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, [isAutoRefreshEnabled, refreshInterval, fetchProcesses]);
 
-  // Filter application groups by name
   const filteredGroups = Object.entries(groupedProcesses).filter(([appName]) =>
     appName.toLowerCase().includes(searchTerm.toLowerCase())
   );
