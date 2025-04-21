@@ -8,7 +8,7 @@ python -m venv venv
 
 # After go to designated folders and run the following:
 backend> pip install -r requirements.txt
-backend> uvicorn main:app --reload  
+backend> uvicorn src.main:app --reload  
 
 frontend> npm install
 frontend> npm run dev

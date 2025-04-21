@@ -7,6 +7,7 @@ import tempfile
 import time
 import threading
 import queue
+from threading import Lock
 
 # Import Windows-specific modules only if on Windows
 if sys.platform == 'win32':
@@ -31,6 +32,56 @@ _known_processes = set()  # Track known process paths to identify new ones
 _icon_extraction_queue = queue.Queue()
 _icon_extraction_thread = None
 _is_extracting_icons = False
+
+# Cache to store process objects and their last measurements
+_process_monitors = {}
+_process_metrics = {}
+_monitor_lock = Lock()
+
+def initialize_process_monitor():
+    """Initialize the background process monitoring system"""
+    def _monitor_background():
+        while True:
+            try:
+                # Monitor the top processes by default
+                top_processes = []
+                for proc in psutil.process_iter(['pid', 'cpu_percent']):
+                    proc.cpu_percent(interval=0)
+                    top_processes.append(proc.info['pid'])
+                    if len(top_processes) >= 50:  # Just monitor top 50 by default
+                        break
+                
+                time.sleep(1)  # Wait to let measurements establish
+                
+                # Update their CPU percentages in our cache
+                with _monitor_lock:
+                    for pid in top_processes:
+                        try:
+                            proc = psutil.Process(pid)
+                            cpu_percent = proc.cpu_percent(interval=0)
+                            
+                            if pid not in _process_monitors:
+                                _process_monitors[pid] = {
+                                    'process': proc,
+                                    'last_check': time.time(),
+                                    'last_cpu_percent': 0.0,
+                                    'cpu_percent': cpu_percent,
+                                    'samples': [cpu_percent]
+                                }
+                            else:
+                                _process_monitors[pid]['cpu_percent'] = cpu_percent
+                                _process_monitors[pid]['last_check'] = time.time()
+                        except:
+                            continue
+            except:
+                pass
+                
+            time.sleep(3)  # Sleep between monitoring cycles
+    
+    # Start background thread
+    import threading
+    monitor_thread = threading.Thread(target=_monitor_background, daemon=True)
+    monitor_thread.start()
 
 def _extract_icons_worker():
     """Background thread to extract icons without blocking the main thread"""
@@ -509,22 +560,48 @@ def set_process_priority(pid, priority_class):
 
 def set_process_affinity(pid, cores):
     """
-    Set CPU affinity for a process
+    Set CPU affinity for a process with protection for critical processes
     
     Args:
         pid (int): Process ID
         cores (list): List of CPU cores to use
     
     Returns:
-        bool: True if successful, False otherwise
+        dict: Result of operation including success status and message
     """
     try:
         process = psutil.Process(pid)
+        
+        # Get process name for protection check
+        process_name = process.name().lower()
+        
+        # List of critical system processes that shouldn't be restricted to one core
+        critical_system_processes = [
+            "system", "svchost", "lsass", "csrss", "winlogon", "services", "explorer"
+        ]
+        
+        # If this is a system process and being limited to one core, prevent it
+        if process_name in critical_system_processes and len(cores) == 1:
+            return {
+                "success": False,
+                "message": f"Restricting {process_name} to a single core is not allowed for system stability"
+            }
+            
+        # If this is heavily using CPU (>150%) and being limited to one core, warn but allow
+        cpu_percent = process.cpu_percent(interval=0.1)
+        if cpu_percent > 150 and len(cores) == 1:
+            # Set affinity but return warning
+            process.cpu_affinity(cores)
+            return {
+                "success": True,
+                "warning": f"This process was using {cpu_percent:.1f}% CPU. Performance may be reduced."
+            }
+            
+        # Normal case - set affinity
         process.cpu_affinity(cores)
-        return True
+        return {"success": True}
     except (psutil.NoSuchProcess, psutil.AccessDenied, ValueError) as e:
-        print(f"Error setting affinity: {e}")
-        return False
+        return {"success": False, "message": f"Error setting affinity: {e}"}
 
 def end_process(pid):
     """
@@ -596,3 +673,113 @@ def end_process_tree(pid):
         return False, "Process no longer exists"
     except Exception as e:
         return False, f"Error terminating process tree: {str(e)}"
+
+def fetch_process_metrics(pids):
+    """
+    Fetch current CPU and memory usage metrics with enhanced real-time monitoring
+    """
+    result = {}
+    
+    # Convert string PIDs to integers if needed
+    if pids and isinstance(pids[0], str):
+        pids = [int(pid) for pid in pids]
+    
+    with _monitor_lock:
+        current_time = time.time()
+        
+        # Initialize monitoring for new processes
+        for pid in pids:
+            try:
+                if pid not in _process_monitors:
+                    proc = psutil.Process(pid)
+                    # Initialize CPU measurement
+                    cpu_percent = proc.cpu_percent(interval=0)
+                    # Get initial memory info
+                    memory_percent = proc.memory_percent()
+                    
+                    _process_monitors[pid] = {
+                        'process': proc,
+                        'last_check': current_time,
+                        'last_cpu_percent': 0.0,
+                        'cpu_percent': cpu_percent,
+                        'last_memory_percent': 0.0,
+                        'memory_percent': memory_percent,
+                        'cpu_samples': [],
+                        'memory_samples': []
+                    }
+                    
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+        
+        # Short delay to allow measurements to register
+        time.sleep(0.05)
+        
+        # Get updated measurements
+        for pid in list(_process_monitors.keys()):
+            if pid not in pids:
+                continue
+                
+            try:
+                monitor = _process_monitors[pid]
+                proc = monitor['process']
+                
+                # Get fresh readings
+                new_cpu_percent = proc.cpu_percent(interval=0)
+                new_memory_percent = proc.memory_percent()
+                memory_info = proc.memory_info()
+                
+                # Record previous values before updating
+                monitor['last_cpu_percent'] = monitor['cpu_percent']
+                monitor['last_memory_percent'] = monitor['memory_percent']
+                
+                # Add to rolling averages for stability
+                monitor['cpu_samples'].append(new_cpu_percent)
+                monitor['memory_samples'].append(new_memory_percent)
+                
+                if len(monitor['cpu_samples']) > 3:
+                    monitor['cpu_samples'].pop(0)
+                if len(monitor['memory_samples']) > 3:
+                    monitor['memory_samples'].pop(0)
+                
+                # Calculate smooth metrics (average of samples)
+                if monitor['cpu_samples']:
+                    monitor['cpu_percent'] = sum(monitor['cpu_samples']) / len(monitor['cpu_samples'])
+                else:
+                    monitor['cpu_percent'] = new_cpu_percent
+                    
+                if monitor['memory_samples']:
+                    monitor['memory_percent'] = sum(monitor['memory_samples']) / len(monitor['memory_samples'])
+                else:
+                    monitor['memory_percent'] = new_memory_percent
+                
+                monitor['last_check'] = current_time
+                
+                # Calculate direction of changes for UI indicators
+                cpu_change = 0
+                if abs(monitor['cpu_percent'] - monitor['last_cpu_percent']) > 0.5:
+                    cpu_change = 1 if monitor['cpu_percent'] > monitor['last_cpu_percent'] else -1
+                
+                memory_change = 0
+                if abs(monitor['memory_percent'] - monitor['last_memory_percent']) > 0.2:
+                    memory_change = 1 if monitor['memory_percent'] > monitor['last_memory_percent'] else -1
+                
+                result[pid] = {
+                    "cpu_percent": monitor['cpu_percent'],
+                    "cpu_change": cpu_change,  # 1=increasing, 0=stable, -1=decreasing
+                    "memory_percent": monitor['memory_percent'],
+                    "memory_change": memory_change,  # 1=increasing, 0=stable, -1=decreasing
+                    "memory_rss": memory_info.rss,
+                    "memory_vms": memory_info.vms,
+                    "status": str(proc.status())
+                }
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                if pid in _process_monitors:
+                    del _process_monitors[pid]
+                continue
+                
+        # Cleanup old processes
+        for pid in list(_process_monitors.keys()):
+            if current_time - _process_monitors[pid]['last_check'] > 60:
+                del _process_monitors[pid]
+    
+    return result

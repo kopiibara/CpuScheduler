@@ -19,3 +19,7 @@ def add_app_processes_to_fcfs(pids):
 def get_fcfs_status():
     """Get the current status of the FCFS scheduler"""
     return fcfs_scheduler.get_status()
+
+def get_fcfs_detailed_status():
+    """Get detailed status of the FCFS scheduler"""
+    return fcfs_scheduler.get_detailed_status()

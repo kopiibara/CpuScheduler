@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Header from "../../components/Header";
 import ProcessesTable from "./ProcessesTable";
 import AppProcessesList from "./AppProcessesList";
@@ -13,13 +13,32 @@ const DashboardPage = () => {
     setSelectedApp({ name: appName, processes });
   };
 
+  // Add this useEffect to your Dashboard component
+  useEffect(() => {
+    // Listen for app terminated events
+    const handleAppTerminated = (event: any) => {
+      const { appName } = event.detail;
+
+      // If the terminated app is currently selected, clear the selection
+      if (selectedApp?.name === appName) {
+        setSelectedApp(null);
+      }
+    };
+
+    window.addEventListener("appTerminated", handleAppTerminated);
+
+    return () => {
+      window.removeEventListener("appTerminated", handleAppTerminated);
+    };
+  }, [selectedApp]);
+
   return (
     <div className="w-screen h-screen text-[#FBFCFA] overflow-hidden flex flex-col">
       <Header />
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left side: Processes Table */}
-        <div className="w-2/5 h-full overflow-hidden">
+        <div className="w-7/20 h-full overflow-hidden">
           <ProcessesTable
             selectedApp={selectedApp}
             onSelectApp={handleAppSelect}
@@ -27,7 +46,7 @@ const DashboardPage = () => {
         </div>
 
         {/* Right side: Selected App Details */}
-        <div className="w-3/5 h-full overflow-hidden">
+        <div className="w-13/20 h-full overflow-hidden">
           {selectedApp ? (
             <AppProcessesList
               appName={selectedApp.name}

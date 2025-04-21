@@ -7,7 +7,7 @@ router = APIRouter()
 
 @router.get("/processes")
 def get_all_processes():
-    return process_contzroller.get_all_processes()
+    return process_controller.get_all_processes()
 
 @router.get("/processes/grouped")
 def get_grouped_processes():
@@ -49,6 +49,17 @@ def set_process_affinity(pid: int, data: dict = Body(...)):
     cores = data.get("cores", [])
     result = process_controller.set_process_affinity(pid, cores)
     return {"success": result, "message": f"CPU affinity for process {pid} set to cores {cores}"}
+
+@router.post("/processes/metrics")
+def get_processes_metrics(data: dict = Body(...)):
+    """
+    Get updated CPU and memory metrics for specific processes
+    
+    Args:
+        data: Dictionary with "pids" key containing list of process IDs
+    """
+    pids = data.get("pids", [])
+    return process_controller.get_processes_metrics(pids)
 
 @router.get("/{pid}/performance")
 def get_process_performance(pid: int):

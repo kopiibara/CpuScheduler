@@ -39,3 +39,8 @@ def add_app_processes_to_fcfs(data: dict = Body(...)):
 def get_fcfs_status():
     """Get the current status of the FCFS scheduler"""
     return scheduling_controller.get_fcfs_status()
+
+@router.get("/scheduler/fcfs/detailed_status")
+def get_fcfs_detailed_status():
+    """Get detailed status of the FCFS scheduler including progress"""
+    return scheduling_controller.get_fcfs_detailed_status()

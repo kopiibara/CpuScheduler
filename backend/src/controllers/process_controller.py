@@ -117,3 +117,20 @@ def terminate_process_tree(pid):
         return {"success": True, "message": f"Process tree with root {pid} terminated successfully"}
     else:
         return {"success": False, "message": error}
+
+def get_processes_metrics(pids):
+    """
+    Get current metrics for specific processes
+    
+    Args:
+        pids: List of process IDs
+    
+    Returns:
+        dict: Dictionary mapping PIDs to their current metrics
+    """
+    try:
+        return process_service.fetch_process_metrics(pids)
+    except Exception as e:
+        # Properly handle errors to prevent 500 responses
+        print(f"Error fetching process metrics: {e}")
+        return {}

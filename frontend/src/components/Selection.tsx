@@ -9,6 +9,7 @@ import {
   Alert,
 } from "@mui/material";
 import axios from "axios";
+import { isCriticalMultithreadedProcess } from "../utils/CriticalProcessDetector";
 
 type SelectionType = "priority" | "cpu_affinity";
 
@@ -48,6 +49,8 @@ const Selection: React.FC<SelectionProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [selectedProcess, setSelectedProcess] = useState<any>(null);
+  const [isMultithreadedProcess, setIsMultithreadedProcess] =
+    useState<boolean>(false);
 
   // Fetch the actual CPU count from the system
   useEffect(() => {
@@ -134,6 +137,15 @@ const Selection: React.FC<SelectionProps> = ({
     }
   }, [open, pid]);
 
+  // Add this effect to check if it's a critical process
+  useEffect(() => {
+    if (open && selectedProcess && type === "cpu_affinity") {
+      setIsMultithreadedProcess(
+        isCriticalMultithreadedProcess(selectedProcess)
+      );
+    }
+  }, [open, selectedProcess, type]);
+
   // Initialize selection state when the component opens
   useEffect(() => {
     if (type === "priority") {
@@ -154,17 +166,42 @@ const Selection: React.FC<SelectionProps> = ({
   }, [currentValue, type, open, cpuCount]);
 
   // Priority options mapping
-  const priorityOptions = [
-    { value: 128, label: "High" },
-    { value: 32, label: "Above Normal" },
-    { value: 16, label: "Normal" },
-    { value: 8, label: "Below Normal" },
-    { value: 4, label: "Low" },
-  ];
+  const getPriorityOptions = (currentPriority: number) => {
+    // Standard Windows priority classes
+    const standardOptions = [
+      { value: 128, label: "High" },
+      { value: 32, label: "Above Normal" },
+      { value: 16, label: "Normal" },
+      { value: 8, label: "Below Normal" },
+      { value: 4, label: "Low" },
+    ];
+
+    // Check if current priority is non-standard
+    const isNonStandard = !standardOptions.some(
+      (option) => option.value === currentPriority
+    );
+
+    // If non-standard, add it to the options
+    if (isNonStandard && typeof currentPriority === "number") {
+      // Create a friendly label if possible
+      let customLabel = "Custom";
+      if (currentPriority === 64) customLabel = "High Performance";
+      else if (currentPriority === 32768) customLabel = "Audio Priority";
+      else customLabel = `Custom (${currentPriority})`;
+
+      // Add the custom option at the top
+      return [
+        { value: currentPriority, label: customLabel },
+        ...standardOptions,
+      ];
+    }
+
+    return standardOptions;
+  };
 
   // Priority option mapping to API values
   const priorityApiMap: Record<number, string> = {
-    4: "idle", // Was "Low" - changed to match backend expectation
+    4: "idle",
     8: "below_normal",
     16: "normal",
     32: "above_normal",
@@ -329,7 +366,7 @@ const Selection: React.FC<SelectionProps> = ({
             )}
 
           <Stack spacing={1}>
-            {priorityOptions.map((option) => (
+            {getPriorityOptions(currentValue as number).map((option) => (
               <button
                 key={option.value}
                 className={`py-1.5 px-3 text-left rounded hover:bg-[#60E2AE19] hover:text-[#60e2ae] transition-all ${
@@ -416,6 +453,21 @@ const Selection: React.FC<SelectionProps> = ({
               sx={{ backgroundColor: "#1c2c1c", color: "#80f080" }}
             >
               {success}
+            </Alert>
+          )}
+
+          {isMultithreadedProcess && selectedCores.length === 1 && (
+            <Alert
+              severity="warning"
+              sx={{
+                backgroundColor: "#2c241c",
+                color: "#f0c080",
+                fontSize: "0.75rem",
+              }}
+            >
+              This application uses multiple CPU cores for optimal performance.
+              Limiting it to a single core may cause reduced performance or
+              instability.
             </Alert>
           )}
 
