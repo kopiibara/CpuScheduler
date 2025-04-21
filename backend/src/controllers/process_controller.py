@@ -1,7 +1,11 @@
+import sys  # Add this import at the top
 from src.services import process_service
 import psutil
 from fastapi import HTTPException
 import time
+from fastapi import APIRouter
+
+router = APIRouter()
 
 def get_all_processes():
     return process_service.fetch_process_list()
@@ -27,15 +31,35 @@ def set_process_priority(pid, priority_level):
         priority_level (str): One of 'idle', 'below_normal', 'normal', 'above_normal', 'high', 'realtime'
     """
     priority_map = {
-        'idle': psutil.IDLE_PRIORITY_CLASS,
-        'below_normal': psutil.BELOW_NORMAL_PRIORITY_CLASS,
-        'normal': psutil.NORMAL_PRIORITY_CLASS,
-        'above_normal': psutil.ABOVE_NORMAL_PRIORITY_CLASS,
-        'high': psutil.HIGH_PRIORITY_CLASS,
-        'realtime': psutil.REALTIME_PRIORITY_CLASS
+        'idle': 4,  # IDLE_PRIORITY_CLASS
+        'below_normal': 8,  # BELOW_NORMAL_PRIORITY_CLASS
+        'normal': 32,  # NORMAL_PRIORITY_CLASS
+        'above_normal': 64,  # ABOVE_NORMAL_PRIORITY_CLASS
+        'high': 128,  # HIGH_PRIORITY_CLASS
+        'realtime': 256  # REALTIME_PRIORITY_CLASS
     }
     
-    return process_service.set_process_priority(pid, priority_map.get(priority_level, psutil.NORMAL_PRIORITY_CLASS))
+    # Get Windows priority class value
+    priority_value = priority_map.get(priority_level, psutil.NORMAL_PRIORITY_CLASS)
+    
+    try:
+        process = psutil.Process(pid)
+        
+        # For Windows platform, use the Windows-specific method
+        if sys.platform == 'win32':
+            import win32process
+            import win32api
+            handle = win32api.OpenProcess(win32process.PROCESS_SET_INFORMATION, False, pid)
+            win32process.SetPriorityClass(handle, priority_value)
+            win32api.CloseHandle(handle)
+        else:
+            # Use nice() for non-Windows platforms
+            process.nice(priority_value)
+        
+        return True
+    except Exception as e:
+        print(f"Error setting process priority: {str(e)}")
+        return False
 
 def set_process_affinity(pid, cores):
     """
@@ -134,3 +158,29 @@ def get_processes_metrics(pids):
         # Properly handle errors to prevent 500 responses
         print(f"Error fetching process metrics: {e}")
         return {}
+
+# Add this debug endpoint to help diagnose the issue
+@router.get("/processes/{pid}/debug_priority")
+def debug_process_priority(pid: int):
+    """Debug endpoint to compare different priority values"""
+    try:
+        process = psutil.Process(pid)
+        
+        # Get nice() value
+        nice_value = process.nice()
+        
+        # Get Windows priority class value
+        windows_priority = process_service.get_windows_priority_class(process)
+        
+        # Get process name for reference
+        name = process.name()
+        
+        return {
+            "pid": pid,
+            "name": name,
+            "nice_value": nice_value,
+            "windows_priority_class": windows_priority,
+            "priority_name": process_service.get_priority_name(windows_priority),
+        }
+    except Exception as e:
+        return {"error": str(e)}

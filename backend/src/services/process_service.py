@@ -442,7 +442,7 @@ def fetch_grouped_processes(skip_icons=False, limit=None, incremental_update=Tru
                                 proc_info['cpu_affinity'] = []
                             
                             try:
-                                proc_info['priority'] = proc.nice()
+                                proc_info['priority'] = get_windows_priority_class(proc)
                             except (psutil.NoSuchProcess, psutil.AccessDenied):
                                 proc_info['priority'] = None
                     except (psutil.NoSuchProcess, psutil.AccessDenied):
@@ -783,3 +783,29 @@ def fetch_process_metrics(pids):
                 del _process_monitors[pid]
     
     return result
+
+def get_windows_priority_class(proc):
+    """
+    Get the Windows priority class value for a process
+    
+    Args:
+        proc: psutil.Process object
+    
+    Returns:
+        int: Windows priority class constant (4, 8, 16, 32, 128, or 256)
+    """
+    try:
+        # On Windows, we need to use the windows_specific extension
+        import psutil._pswindows as pswin
+        
+        # Get the process handle
+        handle = pswin.Process(proc.pid)._proc
+        
+        # Get the priority class directly
+        priority_class = pswin.GetPriorityClass(handle)
+        
+        return priority_class
+    except Exception as e:
+        print(f"Error getting priority class: {e}")
+        # Return Normal as fallback
+        return 32  # NORMAL_PRIORITY_CLASS

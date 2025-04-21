@@ -17,7 +17,6 @@ import PerformanceModal from "../../components/PerformanceModal";
 import axios from "axios";
 import { useProcessSettings } from "../../context/ProcessSettingsContext";
 import CloseIcon from "@mui/icons-material/Close";
-import AccountTreeIcon from "@mui/icons-material/AccountTree";
 
 // Helper to format CPU affinity into a readable format
 const formatCpuAffinity = (affinity?: number[]): string => {
@@ -41,15 +40,13 @@ const formatPriority = (priority?: number): string => {
   // Enhanced map with common non-standard values
   const priorityMap: Record<number, string> = {
     // Standard Windows priority classes
-    4: "Low",
+    4: "Idle",
     8: "Below Normal",
-    16: "Normal",
-    32: "Above Normal",
+    16: "Low",
+    32: "Normal",
+    64: "Above Normal",
     128: "High",
     256: "Realtime",
-
-    // Common non-standard values
-    64: "High Performance",
     96: "Above Normal+",
     160: "High+",
     192: "Realtime-Ready",
@@ -577,31 +574,6 @@ const AppProcessesList: React.FC<AppProcessesListProps> = ({
     handleCloseActionPopover();
   };
 
-  // End a process tree
-  const handleEndProcessTree = async () => {
-    if (!actionProcessId) return;
-
-    try {
-      const response = await axios.delete(
-        `${import.meta.env.VITE_BACKEND_URL}/processes/${actionProcessId}/tree`
-      );
-
-      if (response.data.success) {
-        // Trigger a refresh to update both process list and app list
-        window.dispatchEvent(new CustomEvent("processesUpdated"));
-      } else {
-        console.error(
-          "Failed to terminate process tree:",
-          response.data.message
-        );
-      }
-    } catch (error) {
-      console.error("Error terminating process tree:", error);
-    }
-
-    handleCloseActionPopover();
-  };
-
   // Find the currently selected process
   const selectedProcess = selectedPid
     ? processes.find((p) => p.pid === selectedPid)
@@ -989,8 +961,8 @@ const AppProcessesList: React.FC<AppProcessesListProps> = ({
                     <td className="py-3 px-2">
                       {fcfsCurrentProcess === process.pid ? (
                         <div className="flex flex-col">
-                          <span className="px-2 py-1 text-xs bg-green-500 bg-opacity-20 text-[#fbfcfa] rounded mb-1">
-                            Processing
+                          <span className="px-2 py-1 text-xs bg-green-500 bg-opacity-20 text-[#fbfcfa] rounded mb-1 flex items-center">
+                            <span className="mr-1">Processing</span>
                           </span>
                           <div className="w-full bg-gray-700 rounded-full h-2.5">
                             <div
@@ -1109,23 +1081,6 @@ const AppProcessesList: React.FC<AppProcessesListProps> = ({
               }}
             >
               End Process
-            </Button>
-
-            <Button
-              startIcon={<AccountTreeIcon />}
-              onClick={handleEndProcessTree}
-              variant="contained"
-              color="error"
-              size="small"
-              sx={{
-                textTransform: "none",
-                backgroundColor: "#d32f2f22",
-                "&:hover": {
-                  backgroundColor: "#d32f2f44",
-                },
-              }}
-            >
-              End Process Tree
             </Button>
           </div>
         </div>
