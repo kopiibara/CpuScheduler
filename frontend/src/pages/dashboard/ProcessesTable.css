@@ -16,12 +16,12 @@
 }
 
 .search-input {
-  color: #fbfcfa;
+  color: #242a2d;
   border: none;
   border-radius: 4px;
   padding: 6px 12px;
   width: 100%;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .search-input:hover {
@@ -86,7 +86,7 @@
   padding: 1rem;
   color: #a8a8a8;
   transition: all 0.2s ease-in;
-  border: 2px solid #242a2d;
+  border: 0px solid #242a2d;
 }
 
 .processes-table tr:hover {

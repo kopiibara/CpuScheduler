@@ -2,16 +2,22 @@ import psutil
 import time
 from threading import Thread, Event
 import queue
+import random
 
 class FCFSScheduler:
     def __init__(self):
-        self.process_queue = []  # Changed to list for sorting by PID
+        self.process_queue = []
         self.is_running = False
         self.stop_event = Event()
         self.scheduler_thread = None
         self.current_process = None
         self.time_slice = 2  # Time slice in seconds for each process
-        self.completed_processes = []  # Track processes that have been completed
+        self.completed_processes = []
+        self.process_progress = {}  # Track progress for each process
+        self.process_cpu_usage = {}  # Track CPU usage history
+        self.process_start_times = {}  # Track when each process started execution
+        self.process_end_times = {}  # Add this to track when processes finish
+        self.process_actual_times = {}  # Add this to track actual processing time
     
     def start(self):
         """Start the FCFS scheduler"""
@@ -21,6 +27,11 @@ class FCFSScheduler:
         # Reset state
         self.process_queue = []
         self.completed_processes = []
+        self.process_progress = {}
+        self.process_cpu_usage = {}
+        self.process_start_times = {}
+        self.process_end_times = {}
+        self.process_actual_times = {}
             
         self.is_running = True
         self.stop_event.clear()
@@ -41,6 +52,11 @@ class FCFSScheduler:
         self.current_process = None
         self.process_queue = []
         self.completed_processes = []
+        self.process_progress = {}
+        self.process_cpu_usage = {}
+        self.process_start_times = {}
+        self.process_end_times = {}
+        self.process_actual_times = {}
         return True
     
     def add_application_processes(self, pids):
@@ -84,6 +100,21 @@ class FCFSScheduler:
             "completed": self.completed_processes
         }
     
+    def get_detailed_status(self):
+        """Return detailed status information including progress"""
+        return {
+            "is_running": self.is_running,
+            "queue": self.process_queue,
+            "current_process": self.current_process,
+            "completed": self.completed_processes,
+            "progress": self.process_progress,
+            "cpu_usage": self.process_cpu_usage,
+            "start_times": self.process_start_times,
+            "end_times": self.process_end_times,
+            "processing_times": self.process_actual_times,
+            "priority_changes": getattr(self, 'priority_changes', {})
+        }
+    
     def _scheduler_loop(self):
         """Main scheduler loop that implements FCFS"""
         while not self.stop_event.is_set():
@@ -96,18 +127,85 @@ class FCFSScheduler:
                     if self._is_valid_pid(pid):
                         # Set as current process
                         self.current_process = pid
+                        self.process_start_times[pid] = time.time()
                         
-                        # Apply high priority to current process
-                        self._set_process_priority(pid, psutil.HIGH_PRIORITY_CLASS)
+                        # Track progress from 0-100%
+                        self.process_progress[pid] = 0
                         
-                        # Let it run for the time slice
-                        time.sleep(self.time_slice)
+                        # Store original priority to restore later
+                        original_priority = None
+                        try:
+                            process = psutil.Process(pid)
+                            original_priority = process.nice()
+                            print(f"FCFS: Setting process {pid} from priority {original_priority} to HIGH")
+                            
+                            # Set to HIGH_PRIORITY_CLASS (128)
+                            process.nice(128)  # HIGH_PRIORITY_CLASS
+                            
+                            # Store priority change for status reporting
+                            if not hasattr(self, 'priority_changes'):
+                                self.priority_changes = {}
+                            self.priority_changes[pid] = {
+                                'original': original_priority,
+                                'current': 128,
+                                'changed_at': time.time()
+                            }
+                        except Exception as e:
+                            print(f"FCFS: Error changing priority for process {pid}: {str(e)}")
                         
-                        # Reset priority back to normal
-                        self._set_process_priority(pid, psutil.NORMAL_PRIORITY_CLASS)
+                        # Process with progress updates...
+                        start_time = time.time()
+                        slice_duration = self.time_slice
                         
-                        # Add to completed list
+                        # Add some randomness to processing time (1.5x - 2.5x)
+                        process_complexity = random.uniform(1.5, 2.5)
+                        adjusted_duration = slice_duration * process_complexity
+                        
+                        while time.time() - start_time < adjusted_duration:
+                            if self.stop_event.is_set():
+                                break
+                                
+                            # Calculate progress percentage
+                            elapsed = time.time() - start_time
+                            progress = min(100, int((elapsed / adjusted_duration) * 100))
+                            self.process_progress[pid] = progress
+                            
+                            # Sample CPU usage periodically for charts
+                            if time.time() % 0.5 < 0.1:  # Sample roughly every 0.5 seconds
+                                try:
+                                    proc = psutil.Process(pid)
+                                    cpu = proc.cpu_percent(interval=0)
+                                    if pid not in self.process_cpu_usage:
+                                        self.process_cpu_usage[pid] = []
+                                    self.process_cpu_usage[pid].append(cpu)
+                                except:
+                                    pass
+                            
+                            time.sleep(0.1)  # Small sleep for responsiveness
+                        
+                        # Record end time
+                        end_time = time.time()
+                        self.process_end_times[pid] = end_time
+                        self.process_actual_times[pid] = end_time - self.process_start_times[pid]
+                        
+                        # Reset priority back to original value
+                        try:
+                            if original_priority is not None:
+                                process = psutil.Process(pid)
+                                print(f"FCFS: Restoring process {pid} from HIGH back to priority {original_priority}")
+                                process.nice(original_priority)
+                                
+                                # Update priority change record
+                                if hasattr(self, 'priority_changes') and pid in self.priority_changes:
+                                    self.priority_changes[pid]['restored_at'] = time.time()
+                                    self.priority_changes[pid]['current'] = original_priority
+                            
+                        except Exception as e:
+                            print(f"FCFS: Error restoring priority for process {pid}: {str(e)}")
+                        
+                        # Mark as completed
                         self.completed_processes.append(pid)
+                        self.process_progress[pid] = 100  # Ensure it shows as 100% complete
                     
                     self.current_process = None
                     
@@ -135,6 +233,51 @@ class FCFSScheduler:
         except Exception as e:
             print(f"Error setting priority: {str(e)}")
             return False
+
+    def _get_process_priority(self, pid):
+        """Get the current priority of a process"""
+        try:
+            process = psutil.Process(pid)
+            return process.nice()
+        except:
+            return None
+        
+    def _set_highest_possible_priority(self, pid):
+        """Try to set a process to the highest possible priority"""
+        try:
+            process = psutil.Process(pid)
+            
+            # Try priorities in descending order of elevation
+            priority_levels = [
+                256,  # REALTIME_PRIORITY_CLASS - Try first but likely to fail
+                128,  # HIGH_PRIORITY_CLASS
+                32768,  # ABOVE_NORMAL_PRIORITY_CLASS + CUSTOM(Audio Priority) 
+                64,   # High Performance
+                32,   # NORMAL_PRIORITY_CLASS
+            ]
+            
+            # Get the current priority as fallback
+            current_priority = process.nice()
+            
+            # Try each priority level, starting with highest
+            for priority in priority_levels:
+                try:
+                    # Skip if the priority would be a downgrade
+                    if current_priority and priority < current_priority:
+                        continue
+                        
+                    process.nice(priority)
+                    print(f"Successfully set process {pid} to priority {priority}")
+                    return priority
+                except Exception as e:
+                    # If permission error or other issue, try next level
+                    continue
+                    
+            # If all attempts failed, just return the current priority
+            return current_priority
+        except Exception as e:
+            print(f"Error setting highest priority: {str(e)}")
+            return None
 
 # Create a global instance that can be imported by other modules
 fcfs_scheduler = FCFSScheduler()

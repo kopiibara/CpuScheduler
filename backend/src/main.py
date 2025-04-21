@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.routes import process_routes, system_info_routes, scheduling_routes
+from src.services import process_service
 import uvicorn
 import sys
 import os
@@ -24,6 +25,12 @@ app.include_router(scheduling_routes.router)
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+
+# Add this to your app startup code
+@app.on_event("startup")
+async def startup_event():
+    # Initialize the process monitoring system
+    process_service.initialize_process_monitor()
 
 # This part allows both:
 # - Running with `uvicorn src.main:app --reload`

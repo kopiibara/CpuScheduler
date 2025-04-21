@@ -1,9 +1,11 @@
 export interface Process {
   pid: number;
   name: string;
-  status: string;
-  cpu_affinity: number[];
+  status?: string;
+  cpu_affinity?: number[];
   priority?: number;
+  // Add this new property
+  _originalPriority?: number;
   exe: string | null;
   description: string | null;
   icon: string | null;
