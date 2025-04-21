@@ -1,9 +1,75 @@
-import sys  # Add this import at the top
+import sys  # Keep this import
 from src.services import process_service
 import psutil
 from fastapi import HTTPException
 import time
+import traceback  # Add this for better error reporting
 from fastapi import APIRouter
+
+# Import Windows priority constants only if on Windows
+if sys.platform == 'win32':
+    import win32api
+    import win32process
+    import win32con  # Add this for checking admin rights
+    
+    # Use the actual Windows constants instead of hardcoded values
+    PRIORITY_MAP = {
+        'idle': win32process.IDLE_PRIORITY_CLASS,                # 64
+        'below_normal': win32process.BELOW_NORMAL_PRIORITY_CLASS,  # 16384
+        'normal': win32process.NORMAL_PRIORITY_CLASS,            # 32
+        'above_normal': win32process.ABOVE_NORMAL_PRIORITY_CLASS,  # 32768
+        'high': win32process.HIGH_PRIORITY_CLASS,                # 128
+        'realtime': win32process.REALTIME_PRIORITY_CLASS         # 256
+    }
+    
+    # Reverse map for debugging
+    PRIORITY_NAME_MAP = {v: k for k, v in PRIORITY_MAP.items()}
+
+def has_admin_rights():
+    """Check if the application is running with administrator privileges"""
+    if sys.platform == 'win32':
+        try:
+            return win32api.GetCurrentProcess().has_admin()
+        except:
+            return False
+    return False
+
+def get_windows_priority_class(process):
+    """Safely get the Windows priority class"""
+    if sys.platform != 'win32':
+        return None
+        
+    try:
+        # Use safer method to get priority
+        import ctypes
+        from ctypes import wintypes
+        
+        # Open process with minimal permissions
+        handle = win32api.OpenProcess(
+            win32con.PROCESS_QUERY_LIMITED_INFORMATION, 
+            False, 
+            process.pid
+        )
+        
+        if not handle:
+            return None
+            
+        # Get priority using direct Windows API
+        value = ctypes.wintypes.DWORD()
+        success = ctypes.windll.kernel32.GetPriorityClass(
+            handle, 
+            ctypes.byref(value)
+        )
+        win32api.CloseHandle(handle)
+        
+        if success:
+            return value.value
+            
+        return None
+    except Exception as e:
+        print(f"Error getting priority class: {str(e)}")
+        return None
+
 
 router = APIRouter()
 
@@ -30,36 +96,47 @@ def set_process_priority(pid, priority_level):
         pid (int): Process ID
         priority_level (str): One of 'idle', 'below_normal', 'normal', 'above_normal', 'high', 'realtime'
     """
-    priority_map = {
-        'idle': 4,  # IDLE_PRIORITY_CLASS
-        'below_normal': 8,  # BELOW_NORMAL_PRIORITY_CLASS
-        'normal': 32,  # NORMAL_PRIORITY_CLASS
-        'above_normal': 64,  # ABOVE_NORMAL_PRIORITY_CLASS
-        'high': 128,  # HIGH_PRIORITY_CLASS
-        'realtime': 256  # REALTIME_PRIORITY_CLASS
-    }
+    priority_value = PRIORITY_MAP.get(priority_level)
     
-    # Get Windows priority class value
-    priority_value = priority_map.get(priority_level, psutil.NORMAL_PRIORITY_CLASS)
+    if priority_value is None:
+        print(f"Invalid priority level: {priority_level}")
+        return {"success": False, "message": f"Invalid priority level: {priority_level}"}
     
     try:
-        process = psutil.Process(pid)
+  
+        # Check if process exists
+        if not psutil.pid_exists(pid):
+            return {"success": False, "message": f"Process {pid} does not exist"}
         
         # For Windows platform, use the Windows-specific method
         if sys.platform == 'win32':
-            import win32process
-            import win32api
-            handle = win32api.OpenProcess(win32process.PROCESS_SET_INFORMATION, False, pid)
-            win32process.SetPriorityClass(handle, priority_value)
-            win32api.CloseHandle(handle)
+            handle = None
+            try:
+                handle = win32api.OpenProcess(win32con.PROCESS_SET_INFORMATION, False, pid)
+                if not handle:
+                    return {"success": False, "message": f"Failed to open process {pid}"}
+                    
+                win32process.SetPriorityClass(handle, priority_value)
+                return {"success": True, "message": f"Priority set to {priority_level}"}
+            except Exception as e:
+                return {"success": False, "message": f"Error: {str(e)}"}
+            finally:
+                if handle:
+                    win32api.CloseHandle(handle)
         else:
             # Use nice() for non-Windows platforms
+            process = psutil.Process(pid)
             process.nice(priority_value)
-        
-        return True
+            return {"success": True, "message": f"Priority set to {priority_level}"}
+            
+    except psutil.NoSuchProcess:
+        return {"success": False, "message": f"Process {pid} no longer exists"}
+    except psutil.AccessDenied:
+        return {"success": False, "message": f"Access denied. Run as administrator to change process priority"}
     except Exception as e:
         print(f"Error setting process priority: {str(e)}")
-        return False
+        traceback.print_exc()
+        return {"success": False, "message": f"Unexpected error: {str(e)}"}
 
 def set_process_affinity(pid, cores):
     """
@@ -170,7 +247,7 @@ def debug_process_priority(pid: int):
         nice_value = process.nice()
         
         # Get Windows priority class value
-        windows_priority = process_service.get_windows_priority_class(process)
+        windows_priority = get_windows_priority_class(process)
         
         # Get process name for reference
         name = process.name()
@@ -180,7 +257,7 @@ def debug_process_priority(pid: int):
             "name": name,
             "nice_value": nice_value,
             "windows_priority_class": windows_priority,
-            "priority_name": process_service.get_priority_name(windows_priority),
+            "priority_name": PRIORITY_NAME_MAP.get(windows_priority, "Unknown"),
         }
     except Exception as e:
         return {"error": str(e)}
