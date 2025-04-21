@@ -170,10 +170,9 @@ const Selection: React.FC<SelectionProps> = ({
     // Standard Windows priority classes
     const standardOptions = [
       { value: 128, label: "High" },
-      { value: 32, label: "Above Normal" },
-      { value: 16, label: "Normal" },
-      { value: 8, label: "Below Normal" },
-      { value: 4, label: "Low" },
+      { value: 64, label: "Above Normal" },
+      { value: 32, label: "Normal" },
+      { value: 16, label: "Low" },
     ];
 
     // Check if current priority is non-standard
@@ -201,12 +200,13 @@ const Selection: React.FC<SelectionProps> = ({
 
   // Priority option mapping to API values
   const priorityApiMap: Record<number, string> = {
-    4: "idle",
-    8: "below_normal",
-    16: "normal",
-    32: "above_normal",
-    128: "high",
-    256: "realtime",
+    4: "Idle",
+    8: "Below Normal",
+    16: "Low",
+    32: "Normal", // NORMAL_PRIORITY_CLASS is 32
+    64: "Above Normal", // ABOVE_NORMAL_PRIORITY_CLASS is 64
+    128: "High",
+    256: "Realtime",
   };
 
   // Update the handleApplyPriority function
