@@ -21,13 +21,53 @@ let win: BrowserWindow | null;
 let backendProcess: ChildProcess | null = null;
 let windowCreated = false; // Prevent multiple windows
 
-// Main entry point
-app.whenReady().then(() => {
-  startBackendAndCreateWindow();
-});
+// Ensure single instance lock
+const gotTheLock = app.requestSingleInstanceLock();
 
-function startBackendAndCreateWindow() {
+if (!gotTheLock) {
+  console.log("Another instance is already running. Quitting...");
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    // Someone tried to run a second instance, focus our window instead
+    if (win) {
+      if (win.isMinimized()) win.restore();
+      win.focus();
+    }
+  });
+
+  // Main entry point
+  app.whenReady().then(() => {
+    startBackendAndCreateWindow();
+  });
+}
+
+function isBackendRunning(): Promise<boolean> {
+  return new Promise((resolve) => {
+    http
+      .get("http://127.0.0.1:8000/health", (res) => {
+        if (res.statusCode === 200) {
+          console.log("Backend is already running");
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      })
+      .on("error", () => {
+        resolve(false);
+      });
+  });
+}
+
+async function startBackendAndCreateWindow() {
   let backendPath: string;
+
+  // Check if backend is already running
+  if (await isBackendRunning()) {
+    console.log("Backend already running, skipping start");
+    createWindow(true);
+    return;
+  }
 
   if (VITE_DEV_SERVER_URL) {
     // Development mode - use path in public folder

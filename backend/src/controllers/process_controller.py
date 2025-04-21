@@ -6,14 +6,17 @@ import time
 def get_all_processes():
     return process_service.fetch_process_list()
 
-def get_grouped_processes():
+def get_grouped_processes(incremental=True):
     """
     Get all processes grouped by application name and sorted by importance
+    
+    Args:
+        incremental (bool): If True, use incremental updates for better performance
     
     Returns:
         dict: Dictionary with application names as keys and lists of sorted process info
     """
-    return process_service.fetch_grouped_processes()
+    return process_service.fetch_grouped_processes(incremental_update=incremental)
 
 def set_process_priority(pid, priority_level):
     """
@@ -82,3 +85,35 @@ def get_process_performance(pid: int):
         raise HTTPException(status_code=404, detail=f"Process with PID {pid} not found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+def terminate_process(pid):
+    """
+    Terminate a single process
+    
+    Args:
+        pid (int): Process ID
+        
+    Returns:
+        dict: Result of the termination attempt
+    """
+    success, error = process_service.end_process(pid)
+    if success:
+        return {"success": True, "message": f"Process {pid} terminated successfully"}
+    else:
+        return {"success": False, "message": error}
+
+def terminate_process_tree(pid):
+    """
+    Terminate a process and all its child processes
+    
+    Args:
+        pid (int): Process ID
+        
+    Returns:
+        dict: Result of the termination attempt
+    """
+    success, error = process_service.end_process_tree(pid)
+    if success:
+        return {"success": True, "message": f"Process tree with root {pid} terminated successfully"}
+    else:
+        return {"success": False, "message": error}

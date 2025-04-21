@@ -1,5 +1,8 @@
 #After cloning, open terminal and do the following
 
+#Create Environmental Variable (venv):
+python -m venv venv
+
 # Run first the following:
 .\venv\Scripts\Activate.ps1
 

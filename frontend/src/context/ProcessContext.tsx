@@ -48,14 +48,19 @@ export const ProcessProvider: React.FC<{ children: React.ReactNode }> = ({
         setLoading(true);
       } else if (forceRefresh) {
         // For forced refreshes, use a different approach than full loading screen
-        // You could set a different state here if you wanted a mini-loader
       }
 
       try {
+        // Use incremental=false only for initial load or forced refresh
+        const incremental = !isInitialLoad && !forceRefresh;
+
         const response = await axios.get(
           `${import.meta.env.VITE_BACKEND_URL}/processes/grouped`,
           {
-            params: { _t: new Date().getTime() }, // Cache busting
+            params: {
+              _t: new Date().getTime(), // Cache busting
+              incremental: incremental, // Request incremental updates when possible
+            },
             timeout: 2000, // Short timeout to prevent hanging
           }
         );
@@ -103,6 +108,56 @@ export const ProcessProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     };
   }, [isAutoRefreshEnabled, refreshInterval, fetchProcesses]);
+
+  useEffect(() => {
+    const handleProcessesUpdated = (event: CustomEvent) => {
+      // If we have event details, we can optimize the refresh
+      const details = event.detail;
+
+      if (details?.type === "processTerminated") {
+        // Optimistic update - remove the terminated process from local state
+        const updatedGroups = { ...groupedProcesses };
+
+        // Loop through all app groups
+        Object.keys(updatedGroups).forEach((appName) => {
+          // Filter out the terminated process
+          updatedGroups[appName] = updatedGroups[appName].filter(
+            (proc) => proc.pid !== details.pid
+          );
+
+          // Remove the app entirely if it has no more processes
+          if (updatedGroups[appName].length === 0) {
+            delete updatedGroups[appName];
+          }
+        });
+
+        setGroupedProcesses(updatedGroups);
+
+        // Only do a backend refresh if not prevented
+        if (!details.preventRefresh) {
+          setTimeout(() => fetchProcesses(true), 500);
+        }
+      } else if (details?.type === "processTreeTerminated") {
+        // For process trees, do a full refresh since multiple processes may be affected
+        fetchProcesses(true);
+      } else {
+        // Default case - standard refresh
+        fetchProcesses(true);
+      }
+    };
+
+    window.addEventListener(
+      "processesUpdated",
+      handleProcessesUpdated as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        "processesUpdated",
+        handleProcessesUpdated as EventListener
+      );
+    };
+  }, [fetchProcesses, groupedProcesses]);
 
   const filteredGroups = Object.entries(groupedProcesses).filter(([appName]) =>
     appName.toLowerCase().includes(searchTerm.toLowerCase())

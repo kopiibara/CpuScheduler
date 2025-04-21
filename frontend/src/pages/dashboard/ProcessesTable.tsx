@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import "./ProcessesTable.css";
 import NoIcon from "@mui/icons-material/InsertDriveFileRounded";
 import { useProcesses } from "../../context/ProcessContext";
-import BackspaceIcon from "@mui/icons-material/BackspaceRounded";
+import BackspaceIcon from "@mui/icons-material/CloseRounded";
 
 interface ProcessesTableProps {
   selectedApp: { name: string; processes: any[] } | null;
@@ -145,6 +145,7 @@ const ProcessesTable: React.FC<ProcessesTableProps> = ({
                 return (
                   <tr
                     key={appName}
+                    data-app-name={appName}
                     onClick={() => onSelectApp(appName, processes)}
                     className={isSelected ? "selected-row" : ""}
                     style={{ cursor: "pointer" }}

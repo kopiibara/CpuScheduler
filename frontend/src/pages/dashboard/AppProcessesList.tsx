@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { Stack, Tooltip, Checkbox, FormControlLabel, Box } from "@mui/material";
+import {
+  Stack,
+  Tooltip,
+  Checkbox,
+  FormControlLabel,
+  Box,
+  Popover,
+  Button,
+} from "@mui/material";
 import NoIcon from "@mui/icons-material/InsertDriveFileRounded";
 import { Process } from "../../types/ProcessObject";
 import ArrowDownIcon from "@mui/icons-material/ArrowDropDownRounded";
@@ -8,6 +16,8 @@ import Selection from "../../components/Selection";
 import PerformanceModal from "../../components/PerformanceModal";
 import axios from "axios";
 import { useProcessSettings } from "../../context/ProcessSettingsContext";
+import CloseIcon from "@mui/icons-material/Close";
+import AccountTreeIcon from "@mui/icons-material/AccountTree";
 
 // Helper to format CPU affinity into a readable format
 const formatCpuAffinity = (affinity?: number[]): string => {
@@ -126,6 +136,11 @@ const AppProcessesList: React.FC<AppProcessesListProps> = ({
   // Add state for performance modal
   const [graphModalOpen, setGraphModalOpen] = useState<boolean>(false);
   const [selectedGraphPid, setSelectedGraphPid] = useState<number | null>(null);
+
+  // Add these state variables with the other useState declarations
+  const [actionPopoverAnchor, setActionPopoverAnchor] =
+    useState<HTMLElement | null>(null);
+  const [actionProcessId, setActionProcessId] = useState<number | null>(null);
 
   // Fetch FCFS status periodically
   useEffect(() => {
@@ -329,6 +344,113 @@ const AppProcessesList: React.FC<AppProcessesListProps> = ({
     setGraphModalOpen(true);
   };
 
+  // Handle right click for process termination options
+  const handleProcessRightClick = (
+    event: React.MouseEvent<HTMLTableRowElement>,
+    pid: number
+  ) => {
+    event.preventDefault(); // Prevent default context menu
+    event.stopPropagation(); // Prevent triggering the single-click handler
+    setActionProcessId(pid);
+    setActionPopoverAnchor(event.currentTarget);
+  };
+
+  // Close the action popover
+  const handleCloseActionPopover = () => {
+    setActionPopoverAnchor(null);
+    setActionProcessId(null);
+  };
+
+  // End a single process
+  const handleEndProcess = async () => {
+    if (!actionProcessId) return;
+
+    try {
+      const response = await axios.delete(
+        `${import.meta.env.VITE_BACKEND_URL}/processes/${actionProcessId}`
+      );
+
+      if (response.data.success) {
+        // Remove the process from the local state for immediate feedback
+        const updatedProcesses = processes.filter(
+          (p) => p.pid !== actionProcessId
+        );
+        setProcesses(updatedProcesses);
+
+        // Store the terminated PID to handle UI refresh correctly
+        const terminatedPid = actionProcessId;
+        const terminatedAppName = appName;
+
+        // Update the processes count in the parent component
+        const updateProcessCount = () => {
+          const processCountElement = document.querySelector(
+            `tr[data-app-name="${CSS.escape(
+              terminatedAppName
+            )}"] td:nth-child(3)`
+          );
+          if (processCountElement) {
+            const currentCount = parseInt(
+              processCountElement.textContent || "0"
+            );
+            if (!isNaN(currentCount) && currentCount > 0) {
+              processCountElement.textContent = (currentCount - 1).toString();
+            }
+          }
+        };
+
+        // Immediate update
+        updateProcessCount();
+
+        // Ensure the count stays updated even after refresh
+        // This runs AFTER the context's refresh happens
+        setTimeout(updateProcessCount, 600);
+
+        // Dispatch the event with enhanced detail
+        window.dispatchEvent(
+          new CustomEvent("processesUpdated", {
+            detail: {
+              type: "processTerminated",
+              pid: terminatedPid,
+              appName: terminatedAppName,
+              preventRefresh: true, // Add this flag to tell context not to refresh
+            },
+          })
+        );
+      } else {
+        console.error("Failed to terminate process:", response.data.message);
+      }
+    } catch (error) {
+      console.error("Error terminating process:", error);
+    }
+
+    handleCloseActionPopover();
+  };
+
+  // End a process tree
+  const handleEndProcessTree = async () => {
+    if (!actionProcessId) return;
+
+    try {
+      const response = await axios.delete(
+        `${import.meta.env.VITE_BACKEND_URL}/processes/${actionProcessId}/tree`
+      );
+
+      if (response.data.success) {
+        // Trigger a refresh to update both process list and app list
+        window.dispatchEvent(new CustomEvent("processesUpdated"));
+      } else {
+        console.error(
+          "Failed to terminate process tree:",
+          response.data.message
+        );
+      }
+    } catch (error) {
+      console.error("Error terminating process tree:", error);
+    }
+
+    handleCloseActionPopover();
+  };
+
   // Find the currently selected process
   const selectedProcess = selectedPid
     ? processes.find((p) => p.pid === selectedPid)
@@ -529,7 +651,8 @@ const AppProcessesList: React.FC<AppProcessesListProps> = ({
                 <tr
                   key={process.pid}
                   className="border-b-2 border-[#242a2d] text-[#a8a8a8] cursor-pointer hover:bg-[#101619]"
-                  onClick={() => handleProcessRowClick(process.pid)}
+                  onDoubleClick={() => handleProcessRowClick(process.pid)}
+                  onContextMenu={(e) => handleProcessRightClick(e, process.pid)}
                 >
                   <td className="py-3 px-6">{process.pid}</td>
                   <td className="py-3 w-{175px} max-w-[350px] overflow-hidden">
@@ -629,6 +752,71 @@ const AppProcessesList: React.FC<AppProcessesListProps> = ({
           }
         />
       )}
+
+      {/* Process Actions Popover */}
+      <Popover
+        open={Boolean(actionPopoverAnchor)}
+        anchorEl={actionPopoverAnchor}
+        onClose={handleCloseActionPopover}
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "center",
+        }}
+        transformOrigin={{
+          vertical: "top",
+          horizontal: "center",
+        }}
+        PaperProps={{
+          sx: {
+            backgroundColor: "#101619",
+            border: "1px solid #242a2d",
+            borderRadius: "8px",
+            boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.3)",
+          },
+        }}
+      >
+        <div className="p-2 text-[#fbfcfa]">
+          <p className="text-sm font-semibold mb-2 text-center border-b border-[#242a2d] pb-1">
+            Process Actions
+          </p>
+
+          <div className="flex flex-col gap-2">
+            <Button
+              startIcon={<CloseIcon />}
+              onClick={handleEndProcess}
+              variant="contained"
+              color="error"
+              size="small"
+              sx={{
+                textTransform: "none",
+                backgroundColor: "#d32f2f22",
+                "&:hover": {
+                  backgroundColor: "#d32f2f44",
+                },
+              }}
+            >
+              End Process
+            </Button>
+
+            <Button
+              startIcon={<AccountTreeIcon />}
+              onClick={handleEndProcessTree}
+              variant="contained"
+              color="error"
+              size="small"
+              sx={{
+                textTransform: "none",
+                backgroundColor: "#d32f2f22",
+                "&:hover": {
+                  backgroundColor: "#d32f2f44",
+                },
+              }}
+            >
+              End Process Tree
+            </Button>
+          </div>
+        </div>
+      </Popover>
     </Stack>
   );
 };

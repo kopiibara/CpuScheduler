@@ -7,7 +7,7 @@ router = APIRouter()
 
 @router.get("/processes")
 def get_all_processes():
-    return process_controller.get_all_processes()
+    return process_contzroller.get_all_processes()
 
 @router.get("/processes/grouped")
 def get_grouped_processes():
@@ -60,3 +60,23 @@ def get_process_performance(pid: int):
               and per-core CPU usage data
     """
     return process_controller.get_process_performance(pid)
+
+@router.delete("/processes/{pid}")
+def terminate_process(pid: int):
+    """
+    Terminate a single process
+    
+    Args:
+        pid (int): Process ID to terminate
+    """
+    return process_controller.terminate_process(pid)
+
+@router.delete("/processes/{pid}/tree")
+def terminate_process_tree(pid: int):
+    """
+    Terminate a process and all its child processes
+    
+    Args:
+        pid (int): Process ID of the root process to terminate
+    """
+    return process_controller.terminate_process_tree(pid)
