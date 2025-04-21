@@ -9,3 +9,14 @@ backend> uvicorn main:app --reload
 
 frontend> npm install
 frontend> npm run dev
+
+# To build the program
+
+.\venv\Scripts\Activate.ps1
+cd backend pyinstaller --clean --onefile  --name backend_server src/main.py
+
+# Move the backend_server.exe on the dist folder to frontend/public
+
+cd frontend npm run build
+
+# After compiling run the CpuScheduler_v2 

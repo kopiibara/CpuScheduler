@@ -1,82 +1,110 @@
-import { ipcMain, app, BrowserWindow } from "electron";
-import { fileURLToPath } from "node:url";
-import path from "node:path";
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-process.env.APP_ROOT = path.join(__dirname, "..");
-const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
-const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
-const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
-let win;
-function createWindow() {
-  win = new BrowserWindow({
-    title: "CpuScheduler",
-    // Set window title
-    width: 1400,
-    // Default width of the window
-    height: 800,
-    minWidth: 1200,
-    // Minimum width of the window
-    minHeight: 800,
-    // Minimum height of the window
-    resizable: false,
-    // Allow window resizing
-    frame: false,
-    // Remove default window frame
-    webPreferences: {
-      preload: path.join(app.getAppPath(), "dist-electron", "preload.mjs"),
-      nodeIntegration: false,
-      contextIsolation: true
-    }
-  });
-  win.on("maximize", () => {
-    win == null ? void 0 : win.webContents.send("window-state-changed", { isMaximized: true });
-  });
-  win.on("unmaximize", () => {
-    win == null ? void 0 : win.webContents.send("window-state-changed", { isMaximized: false });
-  });
-  win.webContents.on("did-finish-load", () => {
-    win == null ? void 0 : win.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
-  });
-  if (VITE_DEV_SERVER_URL) {
-    win.loadURL(VITE_DEV_SERVER_URL);
-  } else {
-    win.loadFile(path.join(RENDERER_DIST, "index.html"));
+import { app as r, BrowserWindow as f, Menu as h, ipcMain as d } from "electron";
+import { fileURLToPath as w } from "node:url";
+import o from "node:path";
+import { spawn as g } from "child_process";
+import b from "fs";
+import k from "node:http";
+const x = o.dirname(w(import.meta.url));
+process.env.APP_ROOT = o.join(x, "..");
+const c = process.env.VITE_DEV_SERVER_URL, C = o.join(process.env.APP_ROOT, "dist-electron"), p = o.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = c ? o.join(process.env.APP_ROOT, "public") : p;
+let e, t = null, l = !1;
+r.whenReady().then(() => {
+  R();
+});
+function R() {
+  let n;
+  if (c ? n = o.join(
+    process.env.APP_ROOT,
+    "public",
+    "backend_server.exe"
+  ) : n = o.join(process.resourcesPath, "backend_server.exe"), console.log(`Checking if backend exists at: ${n}`), !b.existsSync(n)) {
+    console.error(`ERROR: Backend executable not found at ${n}`), a(!1);
+    return;
+  }
+  console.log(`Starting backend at: ${n}`);
+  try {
+    t = g(n, [], {
+      detached: !1,
+      stdio: "pipe",
+      // Changed from inherit to pipe
+      windowsHide: !0,
+      // Hide console window
+      cwd: o.dirname(n)
+      // Set working directory to the same folder as the exe
+    }), t && t.stdout && t.stdout.on("data", (i) => {
+      console.log(`Backend stdout: ${i.toString().trim()}`);
+    }), t && t.stderr && t.stderr.on("data", (i) => {
+      console.error(`Backend stderr: ${i.toString().trim()}`);
+    }), t.on("error", (i) => {
+      console.error(`Failed to start backend: ${i.message}`), l || a(!1);
+    }), m(0);
+  } catch (i) {
+    console.error(
+      `Exception starting backend: ${i instanceof Error ? i.message : String(i)}`
+    ), l || a(!1);
   }
 }
-ipcMain.on("window-minimize", () => {
-  if (win) win.minimize();
-});
-ipcMain.on("window-maximize", () => {
-  if (win) {
-    if (win.isMaximized()) {
-      win.unmaximize();
-    } else {
-      win.maximize();
+function m(n) {
+  let s = 100;
+  if (n >= 30) {
+    console.error("Backend health check failed after 30 attempts"), l || a(!1);
+    return;
+  }
+  k.get("http://127.0.0.1:8000/health", (u) => {
+    u.statusCode === 200 ? (console.log("Backend is healthy, creating window"), a(!0)) : (s = Math.min(s * 1.5, 2e3), setTimeout(() => m(n + 1), s));
+  }).on("error", () => {
+    s = Math.min(s * 1.5, 2e3), setTimeout(() => m(n + 1), s);
+  });
+}
+function a(n = !1) {
+  if (l) {
+    console.log("Window already created, skipping");
+    return;
+  }
+  l = !0, e = new f({
+    icon: o.join(r.getAppPath(), "public", "cpuScheduler-icon.ico"),
+    title: "CpuScheduler",
+    width: 1400,
+    height: 800,
+    minWidth: 1200,
+    minHeight: 800,
+    resizable: !1,
+    frame: !1,
+    webPreferences: {
+      preload: o.join(r.getAppPath(), "dist-electron", "preload.mjs"),
+      nodeIntegration: !1,
+      contextIsolation: !0
     }
-  }
+  }), e.center(), h.setApplicationMenu(null), e.on("maximize", () => {
+    e == null || e.webContents.send("window-state-changed", { isMaximized: !0 });
+  }), e.on("unmaximize", () => {
+    e == null || e.webContents.send("window-state-changed", { isMaximized: !1 });
+  }), e.webContents.on("did-finish-load", () => {
+    e == null || e.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString()), e == null || e.webContents.send("backend-ready", n);
+  }), c ? e.loadURL(c) : e.loadFile(o.join(p, "index.html"));
+}
+d.on("window-minimize", () => {
+  e && e.minimize();
 });
-ipcMain.on("window-close", () => {
-  if (win) win.close();
+d.on("window-maximize", () => {
+  e && (e.isMaximized() ? e.unmaximize() : e.maximize());
 });
-ipcMain.handle("window-is-maximized", () => {
-  if (win) return win.isMaximized();
-  return false;
+d.on("window-close", () => {
+  e && e.close();
 });
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-    win = null;
-  }
+d.handle("window-is-maximized", () => e ? e.isMaximized() : !1);
+r.on("window-all-closed", () => {
+  t && (console.log("Terminating backend process..."), t.kill(), t = null), process.platform !== "darwin" && (r.quit(), e = null);
 });
-app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
+r.on("activate", () => {
+  f.getAllWindows().length === 0 && a();
 });
-app.whenReady().then(createWindow);
+r.on("before-quit", () => {
+  t && (console.log("Terminating backend process (before-quit)..."), t.kill(), t = null);
+});
 export {
-  MAIN_DIST,
-  RENDERER_DIST,
-  VITE_DEV_SERVER_URL
+  C as MAIN_DIST,
+  p as RENDERER_DIST,
+  c as VITE_DEV_SERVER_URL
 };

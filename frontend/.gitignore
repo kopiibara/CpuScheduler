@@ -11,6 +11,15 @@ node_modules
 dist
 dist-ssr
 *.local
+package-lock.json
+
+# Env files
+.env
+
+# Build directories
+build
+dist
+release
 
 # Editor directories and files
 .vscode/*
@@ -22,3 +31,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+

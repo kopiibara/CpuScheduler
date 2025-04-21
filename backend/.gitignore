@@ -1,0 +1,7 @@
+
+# Build directories
+build
+dist
+
+#Env files
+.env
