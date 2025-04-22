@@ -40,17 +40,14 @@ const formatPriority = (priority?: number): string => {
   // Enhanced map with common non-standard values
   const priorityMap: Record<number, string> = {
     // Standard Windows priority classes
-    4: "Idle",
-    8: "Below Normal",
-    16: "Low",
-    32: "Normal",
-    64: "Above Normal",
-    128: "High",
-    256: "Realtime",
-    96: "Above Normal+",
-    160: "High+",
-    192: "Realtime-Ready",
-    32768: "Audio Priority",
+    64: "Idle", // IDLE_PRIORITY_CLASS
+    16384: "Below Normal", // BELOW_NORMAL_PRIORITY_CLASS
+    32: "Normal", // NORMAL_PRIORITY_CLASS
+    32768: "Above Normal", // ABOVE_NORMAL_PRIORITY_CLASS
+    128: "High", // HIGH_PRIORITY_CLASS
+    256: "Realtime", // REALTIME_PRIORITY_CLASS
+
+    // Keep any special cases
     32776: "Audio Priority (Below)",
     32784: "Audio Priority (Normal)",
     32800: "Audio Priority (Above)",
@@ -251,7 +248,7 @@ const AppProcessesList: React.FC<AppProcessesListProps> = ({
               // Show completion notification
               setShowCompletionNotice(true);
               // Hide notification after 5 seconds
-              setTimeout(() => setShowCompletionNotice(false), 5000);
+              setTimeout(() => setShowCompletionNotice(false), 3000);
               // Restore original process order
               setProcesses(initialProcesses);
             } catch (error) {
@@ -948,7 +945,22 @@ const AppProcessesList: React.FC<AppProcessesListProps> = ({
                         handleButtonClick(e, process.pid, "priority");
                       }}
                     >
-                      <span>{formatPriority(process.priority as number)}</span>
+                      {fcfsEnabled && fcfsCurrentProcess === process.pid ? (
+                        <div className="flex flex-col">
+                          <span className="text-green-400 flex items-center">
+                            {formatPriority(128)}{" "}
+                            <span className="ml-1 text-sm">(FCFS)</span>
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            Original:{" "}
+                            {formatPriority(process.priority as number)}
+                          </span>
+                        </div>
+                      ) : (
+                        <span>
+                          {formatPriority(process.priority as number)}
+                        </span>
+                      )}
                       {activeButton?.pid === process.pid &&
                       activeButton?.type === "priority" ? (
                         <ArrowUpIcon />

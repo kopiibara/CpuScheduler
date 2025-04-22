@@ -170,9 +170,10 @@ const Selection: React.FC<SelectionProps> = ({
     // Standard Windows priority classes
     const standardOptions = [
       { value: 128, label: "High" },
-      { value: 64, label: "Above Normal" },
+      { value: 32768, label: "Above Normal" },
       { value: 32, label: "Normal" },
-      { value: 16, label: "Low" },
+      { value: 16384, label: "Below Normal" },
+      { value: 64, label: "Idle" },
     ];
 
     // Check if current priority is non-standard
@@ -184,7 +185,7 @@ const Selection: React.FC<SelectionProps> = ({
     if (isNonStandard && typeof currentPriority === "number") {
       // Create a friendly label if possible
       let customLabel = "Custom";
-      if (currentPriority === 64) customLabel = "High Performance";
+      if (currentPriority === 256) customLabel = "Realtime";
       else if (currentPriority === 32768) customLabel = "Audio Priority";
       else customLabel = `Custom (${currentPriority})`;
 
@@ -200,13 +201,12 @@ const Selection: React.FC<SelectionProps> = ({
 
   // Priority option mapping to API values
   const priorityApiMap: Record<number, string> = {
-    4: "Idle",
-    8: "Below Normal",
-    16: "Low",
-    32: "Normal", // NORMAL_PRIORITY_CLASS is 32
-    64: "Above Normal", // ABOVE_NORMAL_PRIORITY_CLASS is 64
-    128: "High",
-    256: "Realtime",
+    64: "idle",
+    16384: "below_normal",
+    32: "normal",
+    32768: "above_normal",
+    128: "high",
+    256: "realtime",
   };
 
   // Update the handleApplyPriority function

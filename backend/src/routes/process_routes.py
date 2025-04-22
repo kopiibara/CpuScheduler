@@ -25,16 +25,13 @@ def set_process_priority(pid: int, data: dict = Body(...)):
     Set the priority for a specific process
     """
     try:
-        priority_level = data.get("priority", "normal")
-        result = process_controller.set_process_priority(pid, priority_level)
+        priority_level = data.get("priority")
+        if not priority_level:
+            return {"success": False, "message": "Missing priority level"}
         
-        if result:
-            return {"success": True, "message": f"Priority for process {pid} set to {priority_level}"}
-        else:
-            return {"success": False, "message": "Failed to set process priority"}, 400
+        return process_controller.set_process_priority(pid, priority_level)
     except Exception as e:
-        print(f"Error in priority endpoint: {str(e)}")
-        return {"success": False, "message": str(e)}, 500
+        return {"success": False, "message": str(e)}
 
 @router.post("/processes/{pid}/affinity")
 def set_process_affinity(pid: int, data: dict = Body(...)):
