@@ -248,7 +248,7 @@ const AppProcessesList: React.FC<AppProcessesListProps> = ({
               // Show completion notification
               setShowCompletionNotice(true);
               // Hide notification after 5 seconds
-              setTimeout(() => setShowCompletionNotice(false), 5000);
+              setTimeout(() => setShowCompletionNotice(false), 3000);
               // Restore original process order
               setProcesses(initialProcesses);
             } catch (error) {
@@ -945,7 +945,22 @@ const AppProcessesList: React.FC<AppProcessesListProps> = ({
                         handleButtonClick(e, process.pid, "priority");
                       }}
                     >
-                      <span>{formatPriority(process.priority as number)}</span>
+                      {fcfsEnabled && fcfsCurrentProcess === process.pid ? (
+                        <div className="flex flex-col">
+                          <span className="text-green-400 flex items-center">
+                            {formatPriority(128)}{" "}
+                            <span className="ml-1 text-sm">(FCFS)</span>
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            Original:{" "}
+                            {formatPriority(process.priority as number)}
+                          </span>
+                        </div>
+                      ) : (
+                        <span>
+                          {formatPriority(process.priority as number)}
+                        </span>
+                      )}
                       {activeButton?.pid === process.pid &&
                       activeButton?.type === "priority" ? (
                         <ArrowUpIcon />
